@@ -1,9 +1,12 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import { createCoachModel, DEFAULT_MODEL, type CoachModel } from "@/lib/coach/model";
-
-/** SDK per-attempt timeout; the pipeline also enforces an overall 20 s deadline. */
-export const SDK_TIMEOUT_MS = 15_000;
+import {
+  createCoachModel,
+  DEFAULT_MODEL,
+  SDK_MAX_RETRIES,
+  SDK_TIMEOUT_MS,
+  type CoachModel,
+} from "@/lib/coach/model";
 
 let cached: { key: string; model: CoachModel } | undefined;
 
@@ -12,7 +15,7 @@ export function getCoachModel(): CoachModel | null {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) return null;
   if (cached?.key !== apiKey) {
-    const client = new Anthropic({ apiKey, timeout: SDK_TIMEOUT_MS, maxRetries: 1 });
+    const client = new Anthropic({ apiKey, timeout: SDK_TIMEOUT_MS, maxRetries: SDK_MAX_RETRIES });
     cached = {
       key: apiKey,
       model: createCoachModel(client, process.env.COACH_MODEL || DEFAULT_MODEL),

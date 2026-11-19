@@ -31,7 +31,7 @@ flowchart TD
 3. `detectLanguage(message)` → `en | ur | roman_ur`.
 4. `preScreen(message)` normalises and matches patterns; the first category by priority wins.
 5. **Hit** → `buildEscalation(category, language, region, "prescreen")` → step 9.
-6. **Miss** → if `ANTHROPIC_API_KEY` is missing → fallback (`config`). Otherwise `coachModel.generate({message, history, language})` under a 20 s AbortController deadline (SDK `timeout: 15_000`, `maxRetries: 1`).
+6. **Miss** → if `ANTHROPIC_API_KEY` is missing → fallback (`config`). Otherwise `coachModel.generate({message, history, language})` under a 20 s AbortController deadline (SDK `timeout: 18_000`, `maxRetries: 1`; the pipeline deadline is 19 s).
 7. `model.ts` maps the outcome to `{ok: true, output}` or `{ok: false, reason}` (see §4); it uses `messages.create` with `output_config.format = zodOutputFormat(ModelOutput)`, checks `stop_reason`, takes the text block, `JSON.parse`, `ModelOutput.safeParse`.
 8. **Triage gate**: crisis or category ≠ none → escalation (source `model`). Else **post-check** → coach reply, or the refer template on violation.
 9. `CoachReply.parse(reply)`; if our own reply fails validation, a hard-coded English fallback constant is sent. One log line (§6.6 of SPEC). Respond 200.

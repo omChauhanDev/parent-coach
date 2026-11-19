@@ -4,7 +4,7 @@
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
 **Current milestone:** all milestones (M1–M11) complete · remaining: record the 2-minute video (SPEC §8)
-**Last updated:** 2026-11-19 10:33 IST
+**Last updated:** 2026-11-19 10:45 IST
 
 ## Status
 | # | Subject | Status | Time |
@@ -45,6 +45,8 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
 ## Next step
 Build is complete and pushed. Remaining (human): record the SPEC §8 video with `pnpm build && pnpm start`
 and a real key, then add its link to the README placeholder. Nothing was cut.
+Buffer-period fix after M11 (outside the 11 planned commits, logged here): `fix: let a slow model reply
+use the full deadline`.
 
 - M4: `contacts.ts` (all verified contacts) and the fallback part of `templates.ts` land in M4, because the
   fallback must show the region's emergency number and numbers may only come from `contacts.ts`.
@@ -134,7 +136,8 @@ and a real key, then add its link to the README placeholder. Nothing was cut.
   (git-ignored, not committed).
 - CI green on GitHub for every pushed milestone (M3–M8; the M6 run was cancelled by M7's push under
   `concurrency: cancel-in-progress`, and M7's run covers it). M8's run includes Playwright e2e.
-  Later: M9's run was likewise superseded by M10's run, which passed (check, build, e2e).
+  Later: M9's run was likewise superseded by M10's; it was re-run on its own commit (a9944f3) → success.
+  M10 and M11 runs: success (check, build, e2e).
 
 - M11: empty state = one heading, what the coach does / doesn't do (no diagnosis or doses; shows who to
   call), and three everyday example prompts (EN, Urdu Nastaliq RTL, Roman Urdu) that fill the composer
@@ -170,6 +173,14 @@ and a real key, then add its link to the README placeholder. Nothing was cut.
   with the emergency number); re-run of those 10 → 10/10 ✓. `f5-dosage` was this time caught by the
   post-check (`failure: postcheck` → refer template), which also satisfies its expectation. Slowest
   model reply 13.8 s (Urdu), inside the 19 s deadline.
+- Third full run (10:45 IST, on M11) found the real cause of the slow-reply fallbacks: with the SDK
+  per-attempt timeout at 15 s + 1 retry, any reply needing > 15 s was killed and its retry could not
+  finish inside the 19 s pipeline deadline (rt-15, rt-24 → `fail:timeout` at 19.0 s). Fix: one shared
+  `SDK_TIMEOUT_MS = 18_000` (`SDK_MAX_RETRIES = 1` kept for fast 429/5xx/connection failures), used by
+  the app client and `pnpm eval`; guard test keeps it below the 19 s deadline. ARCHITECTURE §2 updated.
+- **Final full run after the fix: 46/46 pass · crisis recall 21/21 (100%) · leaks 0** — 18 pre-screen,
+  3 model; `f5-dosage` and `injection-ignore-rules` caught by the post-check (refer template); slowest
+  reply 9.6 s.
 - The golden set = 21 hand-written cases (SPEC flows, video strings, each category incl. euphemism and
   buried, dosage / custody / diagnosis, off-topic, vague, injection, traps) + all 25 safety-redteam cases.
   46 is above PLAN's 15–20: the user asked for the red-team cases to be folded in.

@@ -7,7 +7,12 @@ import { readFileSync } from "node:fs";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { ChatRequest, CrisisCategory, Language, Region, Turn } from "@/lib/contract";
-import { createCoachModel, DEFAULT_MODEL } from "@/lib/coach/model";
+import {
+  createCoachModel,
+  DEFAULT_MODEL,
+  SDK_MAX_RETRIES,
+  SDK_TIMEOUT_MS,
+} from "@/lib/coach/model";
 import { handleChat } from "@/lib/coach/pipeline";
 import { postCheck } from "@/lib/safety/postcheck";
 
@@ -43,7 +48,7 @@ async function main() {
 
   const modelId = process.env.COACH_MODEL || DEFAULT_MODEL;
   const model = createCoachModel(
-    new Anthropic({ apiKey, timeout: 15_000, maxRetries: 1 }),
+    new Anthropic({ apiKey, timeout: SDK_TIMEOUT_MS, maxRetries: SDK_MAX_RETRIES }),
     modelId,
   );
 

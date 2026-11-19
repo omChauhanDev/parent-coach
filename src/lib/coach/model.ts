@@ -21,6 +21,13 @@ import { buildMessages, SYSTEM_PROMPT } from "@/lib/coach/prompt";
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
 export const MAX_TOKENS = 16_000;
+/**
+ * SDK per-attempt timeout and retries. One slow attempt may use almost the whole pipeline deadline
+ * (19 s); the single retry is for fast failures (429, 5xx, dropped connection). Urdu replies have taken
+ * up to ~14 s, so a 15 s attempt timeout used to kill them and leave no time for the retry.
+ */
+export const SDK_TIMEOUT_MS = 18_000;
+export const SDK_MAX_RETRIES = 1;
 
 export type FailureReason =
   | "config"

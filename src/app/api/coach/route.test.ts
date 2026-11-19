@@ -16,7 +16,9 @@ import {
   type CoachModel,
   type FailureReason,
   type MessagesClient,
+  SDK_TIMEOUT_MS,
 } from "@/lib/coach/model";
+import { MODEL_DEADLINE_MS } from "@/lib/coach/pipeline";
 
 const create = vi.fn<MessagesClient["messages"]["create"]>();
 let model: CoachModel | null = null;
@@ -294,6 +296,12 @@ describe("failure modes → fallback, HTTP 200, no details (AC-10)", () => {
     expect(r.steps.join(" ")).toContain("15");
     expect(raw).not.toMatch(/upstream detail|bad key|ECONNRESET|weird|req_test/);
     expect(logs.at(-1)).toContain(`"failure":"${failure}"`);
+  });
+
+  it("lets one slow SDK attempt use most of the deadline, still under 20 s (AC-14)", () => {
+    expect(SDK_TIMEOUT_MS).toBeGreaterThanOrEqual(15_000);
+    expect(SDK_TIMEOUT_MS).toBeLessThan(MODEL_DEADLINE_MS);
+    expect(MODEL_DEADLINE_MS).toBeLessThan(20_000);
   });
 
   it("replies with a fallback within 20 s when the model hangs (AC-14)", async () => {
