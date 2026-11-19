@@ -1,8 +1,21 @@
+import {
+  AnthropicError,
+  APIConnectionError,
+  APIConnectionTimeoutError,
+  APIError,
+  APIUserAbortError,
+  AuthenticationError,
+  GatewayTimeoutError,
+  InternalServerError,
+  PermissionDeniedError,
+  RateLimitError,
+  RequestTimeoutError,
+} from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type {
   Message,
   MessageCreateParamsNonStreaming,
 } from "@anthropic-ai/sdk/resources/messages";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ModelOutput, type Language, type Turn } from "@/lib/contract";
 import { buildMessages, SYSTEM_PROMPT } from "@/lib/coach/prompt";
 
@@ -63,7 +76,21 @@ export function parseResponse(response: Message): ModelResult {
   return parsed.success ? { ok: true, output: parsed.data } : { ok: false, reason: "malformed" };
 }
 
-export function mapError(): FailureReason {
+/** SDK error → failure reason (ARCHITECTURE §4). Most specific classes first: they share bases. */
+export function mapError(error: unknown): FailureReason {
+  if (error instanceof APIUserAbortError) return "timeout"; // our 20 s deadline
+  if (error instanceof APIConnectionTimeoutError) return "timeout";
+  if (error instanceof APIConnectionError) return "network";
+  if (error instanceof RateLimitError) return "rate_limit";
+  if (error instanceof AuthenticationError || error instanceof PermissionDeniedError) return "auth";
+  if (error instanceof RequestTimeoutError || error instanceof GatewayTimeoutError)
+    return "timeout";
+  if (error instanceof InternalServerError) return "upstream"; // 5xx incl. 529 OverloadedError
+  if (error instanceof APIError) {
+    return typeof error.status === "number" && error.status >= 500 ? "upstream" : "bad_request";
+  }
+  if (error instanceof AnthropicError) return "malformed";
+  if (error instanceof Error && error.name === "AbortError") return "timeout";
   return "unexpected";
 }
 
@@ -85,8 +112,8 @@ export function createCoachModel(
           signal ? { signal } : undefined,
         );
         return parseResponse(response);
-      } catch {
-        return { ok: false, reason: mapError() };
+      } catch (error) {
+        return { ok: false, reason: mapError(error) };
       }
     },
   };

@@ -1,8 +1,14 @@
 import { CoachReply, type ChatRequest, type Language, type ModelOutput } from "@/lib/contract";
 import { detectLanguage } from "@/lib/language";
+import { postCheck } from "@/lib/safety/postcheck";
 import { preScreen } from "@/lib/safety/prescreen";
-import { buildEscalation, buildFallback, LAST_RESORT_REPLY } from "@/lib/safety/templates";
-import type { CoachModel } from "@/lib/coach/model";
+import {
+  buildEscalation,
+  buildFallback,
+  buildRefer,
+  LAST_RESORT_REPLY,
+} from "@/lib/safety/templates";
+import type { CoachModel, GenerateInput, ModelResult } from "@/lib/coach/model";
 import type { LogLine } from "@/lib/log";
 
 export interface ChatDeps {
@@ -10,7 +16,11 @@ export interface ChatDeps {
   model: CoachModel | null;
   log?: (line: LogLine) => void;
   now?: () => number;
+  /** Overall model deadline; a reply (possibly fallback) always arrives before 20 s (AC-14). */
+  deadlineMs?: number;
 }
+
+export const MODEL_DEADLINE_MS = 19_000;
 
 export interface ChatOutcome {
   reply: CoachReply;
@@ -33,6 +43,27 @@ function coachReply(output: ModelOutput, language: Language): CoachReply {
   };
 }
 
+/** Races the model against the deadline and aborts the request when the deadline wins. */
+async function generateWithDeadline(
+  model: CoachModel,
+  input: GenerateInput,
+  deadlineMs: number,
+): Promise<ModelResult> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<ModelResult>((resolve) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      resolve({ ok: false, reason: "timeout" });
+    }, deadlineMs);
+  });
+  try {
+    return await Promise.race([model.generate(input, controller.signal), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function decide(request: ChatRequest, language: Language, deps: ChatDeps): Promise<Decision> {
   const { region } = request;
 
@@ -42,17 +73,24 @@ async function decide(request: ChatRequest, language: Language, deps: ChatDeps):
 
   if (!deps.model) return { reply: buildFallback(language, region), failure: "config" };
 
-  const result = await deps.model.generate({
-    message: request.message,
-    history: request.history.slice(-8),
-    language,
-  });
+  // L2 + L3: one structured-output call; any failure is fail-closed to the fallback.
+  const result = await generateWithDeadline(
+    deps.model,
+    { message: request.message, history: request.history.slice(-8), language },
+    deps.deadlineMs ?? MODEL_DEADLINE_MS,
+  );
   if (!result.ok) return { reply: buildFallback(language, region), failure: result.reason };
 
+  // Triage gate: a crisis flag OR any category discards the model's text entirely.
   const { output } = result;
-  // Until the escalation templates land, a model-flagged crisis fails closed to the fallback.
   if (output.risk === "crisis" || output.crisisCategory !== "none") {
-    return { reply: buildFallback(language, region) };
+    const category = output.crisisCategory === "none" ? "general" : output.crisisCategory;
+    return { reply: buildEscalation(category, language, region, "model") };
+  }
+
+  // L4: post-check of everything the model wrote.
+  if (postCheck([output.summary, ...output.steps, output.followUp.text])) {
+    return { reply: buildRefer(language, region), failure: "postcheck" };
   }
   return { reply: coachReply(output, language) };
 }

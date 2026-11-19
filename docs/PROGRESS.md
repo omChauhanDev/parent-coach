@@ -3,8 +3,8 @@
 **Deadline: HARD STOP 16:00 IST, Thu 19 Nov 2026** — everything built, reviewed, README written, pushed,
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
-**Current milestone:** M5 complete · next M6
-**Last updated:** 2026-11-19 09:31 IST
+**Current milestone:** M6 complete · next M7
+**Last updated:** 2026-11-19 09:42 IST
 
 ## Status
 | # | Subject | Status | Time |
@@ -14,7 +14,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
 | M3 | ci: add github actions check and build workflow | done (CI green) | 08:58 |
 | M4 | feat: add coach api with zod contract and basic ui | done | 09:05 |
 | M5 | feat: add multilingual safety pre-screen | done | 09:31 |
-| M6 | feat: add model triage and fail-closed fallbacks | todo | |
+| M6 | feat: add model triage and fail-closed fallbacks | done | 09:42 |
 | M7 | feat: render structured replies with rtl support | todo | |
 | M8 | test: add playwright e2e with mock anthropic api | todo | |
 | M9 | docs: add readme | todo | |
@@ -43,8 +43,8 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
   milestone) instead of inside M3; M3 still adds CI and its done-when (pushed + Actions green) is unchanged.
 
 ## Next step
-M6: triage gate, `postcheck.ts`, full SDK error mapping, 19 s deadline, route integration tests for every
-ARCHITECTURE §4 row; reviewer on the staged diff.
+M7: ReplyCard / Composer / region toggle / footer / Nastaliq; SPEC §8 manual pass; screenshots EN + UR,
+mobile + desktop, light + dark; next-devtools clean.
 
 - M4: `contacts.ts` (all verified contacts) and the fallback part of `templates.ts` land in M4, because the
   fallback must show the region's emergency number and numbers may only come from `contacts.ts`.
@@ -71,6 +71,24 @@ ARCHITECTURE §4 row; reviewer on the staged diff.
   expected `source: model` holds.
 - M5: escalation step 1 uses the category's first contact (AE medical → 998, PK medical/self-harm → 1122);
   the fallback/refer danger line uses the region's first two footer numbers.
+
+- M6: overall model deadline is 19 s (not 20) so a fallback is always on the wire before AC-14's 20 s;
+  the SDK keeps `timeout: 15_000, maxRetries: 1`, the deadline aborts via AbortSignal.
+- M6: SDK errors map most-specific first (abort/timeout → `timeout`, connection → `network`, 429 →
+  `rate_limit`, 401/403 → `auth`, 408/504 → `timeout`, 5xx incl. 529 → `upstream`, other 4xx →
+  `bad_request`, SDK parse errors → `malformed`, anything else → `unexpected`).
+- M6 post-check (conservative extension of SPEC L4's "…"): also trips on medicine names (SPEC §6.4 "never
+  names medicines"), dosing-interval phrases ("repeat the dose every…"), Urdu-script ml/mg, any dotted
+  host, and invisible characters are stripped first. Household words that double as doses ("spoon",
+  "tablet", "chamach", "چمچ") and "every N hours" only count in a medicine or symptom context (fever,
+  pain, cough, بخار, pila…), so feeding / screen-time / sleep advice survives.
+- M6 reviewer: verdict "fix first — B1" (post-check missed teaspoonful, saline drops, prescribed tablets,
+  Urdu-script units, dosing intervals; M1 bare domains; m1 zero-width chars; m2 household FPs; m3 a refer
+  test that could not fail). Re-review: "fix first — B2" (my m2 fix had moved Urdu/Roman drops and capful
+  behind the medicine-word check; singular "drop" missed; feeding intervals "every 2–3 hours" tripped;
+  "half the dose" missed; ORS dropped from the medicine list). All fixed with table rows. 3rd pass:
+  **Verdict: ship**; its two minors (m6 everyday false positives — "a drop in grades", "painting",
+  pulao, feeding interval next to "doctor"; m7 "twice a day") were fixed with rows before commit.
 
 ## Open questions / risks
 - Local Node is 25.8.1; Vitest 5.1.1 engines are `^22.12 || ^24 || >=26` (CI uses Node 26). Policy above:

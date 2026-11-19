@@ -102,7 +102,7 @@ describe("preScreen — positives (category × language)", () => {
     ["UPPERCASE + punctuation", "HE SAYS HE WANTS TO KILL HIMSELF!!!", SELF],
     ["stretched letters", "beta saans nahiiii le raha", MED],
     ["Arabic yeh/kaf code points", "ميرا بيٹا خودكشی کی بات کرتا ہے", SELF],
-    ["diacritics + ZWNJ", "وہ خود‌کُشی کرنا چاہتا ہے", SELF],
+    ["diacritics + ZWNJ", "وہ خود\u200Cکُشی کرنا چاہتا ہے", SELF],
     ["Eastern digits in infant fever", "میرا ۲ ماہ کا بچہ ہے اور بخار ہے", MED],
     ["Arabic presentation forms", "ﺧﻮﺩﮐﺸﯽ", SELF],
     ["hyphenated self-harm", "is self-harm common at 13?", SELF],

@@ -12,7 +12,7 @@ describe("normalize", () => {
     ["Arabic kaf → keheh", "ك", "ک"],
     ["heh variants → heh goal", "ه ھ ة", "ہ ہ ہ"],
     ["strips harakat and tatweel", "خُودکـشی", "خودکشی"],
-    ["strips ZWNJ / RLM / BOM", "خود‌کشی‏﻿", "خودکشی"],
+    ["strips ZWNJ / RLM / BOM", "خود\u200Cکشی\u200F\uFEFF", "خودکشی"],
     ["Urdu punctuation → space", "ہے۔کیا؟ہاں،", "ہے کیا ہاں"],
     ["Eastern digits → ASCII", "۱۲ ١٢", "12 12"],
     ["presentation forms (NFKC)", "ﺧﻮﺩ", "خود"],
