@@ -3,8 +3,8 @@
 **Deadline: HARD STOP 16:00 IST, Thu 19 Nov 2026** — everything built, reviewed, README written, pushed,
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
-**Current milestone:** M9 complete · next M10
-**Last updated:** 2026-11-19 10:05 IST
+**Current milestone:** M10 complete · next M11
+**Last updated:** 2026-11-19 10:07 IST
 
 ## Status
 | # | Subject | Status | Time |
@@ -18,7 +18,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
 | M7 | feat: render structured replies with rtl support | done | 09:48 |
 | M8 | test: add playwright e2e with mock anthropic api | done | 09:55 |
 | M9 | docs: add readme | done | 10:05 |
-| M10 | test: add golden eval set against real model | todo | |
+| M10 | test: add golden eval set against real model | done | 10:07 |
 | M11 | feat: polish chat layout and add example prompts | todo | |
 
 ## Decisions
@@ -43,7 +43,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
   milestone) instead of inside M3; M3 still adds CI and its done-when (pushed + Actions green) is unchanged.
 
 ## Next step
-M10: commit `evals/golden.json` (46 cases) + `scripts/eval.ts`; log the full run here.
+M11: empty state with example prompts (EN / UR / Roman), mobile header, focus states; e2e green.
 
 - M4: `contacts.ts` (all verified contacts) and the fallback part of `templates.ts` land in M4, because the
   fallback must show the region's emergency number and numbers may only come from `contacts.ts`.
@@ -139,6 +139,26 @@ M10: commit `evals/golden.json` (46 cases) + `scripts/eval.ts`; log the full run
   only switch to node@26 if something actually breaks, and log it.
 - Urdu / Roman Urdu template text needs native-speaker review (README limitation).
 - Pakistan has no verified 24/7 national mental-health or child-protection line.
+
+## Eval results (M10)
+`pnpm eval`, model `claude-opus-5-5` (effort low), 2026-11-19 ~09:52 IST, on the code committed in M6–M8
+(pipeline / pre-screen / post-check unchanged since). Exit 0.
+
+| Group | Cases | Result | Caught by |
+|---|---|---|---|
+| Everyday EN / UR / Roman / mixed (F1, F2, F8, roman) | 4 | 4 ✓ coach/routine, language matched | model |
+| Crisis — SPEC F3 + §8 video strings (EN, UR, Roman) | 3 | 3 ✓ self_harm | pre-screen |
+| Crisis — F4 buried giving-away, rt-04 buried notes, coercive control | 3 | 3 ✓ escalation | **model** |
+| Crisis — medical, abuse, DV, euphemisms, red-team rt-01…rt-19 | 15 | 15 ✓ escalation, right category | pre-screen |
+| Refer — dosage, custody, diagnosis, injection, rt-08…rt-15 | 11 | 11 ✓ coach/refer, no dose | model |
+| Off-topic, vague (F6, F7) | 2 | 2 ✓ follow-up question | model |
+| False-positive traps (killing it, mar gayi, rt-20…rt-25) | 8 | 8 ✓ coach/routine | model |
+
+**46/46 pass · crisis recall 21/21 (100%) — 18 pre-screen, 3 model · leaks 0.** Model replies took
+2.3–9.7 s (Urdu / Roman Urdu slowest); pre-screen escalations ≤ 32 ms.
+- The golden set = 21 hand-written cases (SPEC flows, video strings, each category incl. euphemism and
+  buried, dosage / custody / diagnosis, off-topic, vague, injection, traps) + all 25 safety-redteam cases.
+  46 is above PLAN's 15–20: the user asked for the red-team cases to be folded in.
 
 ## Cut log
 _(none)_

@@ -34,6 +34,7 @@ safe fallback with the region's emergency numbers.
 | `pnpm dev` / `pnpm build` / `pnpm start` | Next.js 16 app                                                                                        |
 | `pnpm check`                             | `tsc` + ESLint + Prettier + Vitest (unit + route integration) — runs in CI                            |
 | `pnpm e2e`                               | Playwright (chromium) against `next build && next start` with Anthropic mocked over HTTP — runs in CI |
+| `pnpm eval`                              | Golden set against the **real model** — costs money, never in CI                                      |
 
 ## How it stays safe
 
@@ -74,13 +75,18 @@ numbers.
 - **E2E (3 tests)** — everyday flow (incl. Clear resetting the history the model sees) and Urdu /
   Roman Urdu crises with the region toggle; the crisis spec asserts the mock received **zero** model
   requests ([ADR 0003](docs/decisions/0003-e2e-mock-at-http-boundary.md)).
+- **Eval** — 46 golden cases (`evals/golden.json`, incl. 25 from an adversarial red-team pass) through
+  the real pipeline and model; prints which layer caught each crisis and exits 1 on any missed crisis or
+  any dose / number / URL leaking into a coach reply. Last run (2026-11-19): 46/46 pass, crisis recall
+  21/21 — 18 caught by the pre-screen, 3 only by the model (buried warning signs, coercive control).
 
 ## Limitations
 
 - Urdu and Roman Urdu template wording is a draft and needs native-speaker review.
 - Pakistan has no verified 24/7 national mental-health or child-protection line; PK escalations lead with
   15 / 1122 / 115. Contacts must be re-verified before any real use.
-- The pre-screen catches explicit phrases; euphemisms and indirect signs rely on the model layer.
+- The pre-screen catches explicit phrases; euphemisms and indirect signs rely on the model layer
+  (measured by `pnpm eval`).
   It prefers false positives — every escalation invites the parent to continue if no one is in danger.
 - Local only: no auth, persistence, rate limiting or deployment. History lives in React state (last 8
   turns sent); "Clear conversation" empties it.
