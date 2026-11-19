@@ -9,3 +9,4 @@ docs/
 .claude/
 CLAUDE.md
 .mcp.json
+.playwright-mcp/

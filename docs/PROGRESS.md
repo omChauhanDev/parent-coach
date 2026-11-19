@@ -3,16 +3,16 @@
 **Deadline: HARD STOP 16:00 IST, Thu 19 Nov 2026** — everything built, reviewed, README written, pushed,
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
-**Current milestone:** M3 complete · next M4
-**Last updated:** 2026-11-19 08:58 IST
+**Current milestone:** M4 complete · next M5
+**Last updated:** 2026-11-19 09:05 IST
 
 ## Status
 | # | Subject | Status | Time |
 |---|---|---|---|
 | M1 | docs: add spec, architecture, plan and ADRs | done | 08:48 |
 | M2 | chore: scaffold next app with lint, test and hooks | done | 08:57 |
-| M3 | ci: add github actions check and build workflow | done | 08:58 |
-| M4 | feat: add coach api with zod contract and basic ui | todo | |
+| M3 | ci: add github actions check and build workflow | done (CI green) | 08:58 |
+| M4 | feat: add coach api with zod contract and basic ui | done | 09:05 |
 | M5 | feat: add multilingual safety pre-screen | todo | |
 | M6 | feat: add model triage and fail-closed fallbacks | todo | |
 | M7 | feat: render structured replies with rtl support | todo | |
@@ -43,7 +43,17 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
   milestone) instead of inside M3; M3 still adds CI and its done-when (pushed + Actions green) is unchanged.
 
 ## Next step
-M4: `contract.ts`, `language.ts`, `coach/*`, `api/coach/route.ts`, bare page; contract + language tests.
+M5: `safety/{normalize,patterns,prescreen}.ts` + escalation/refer templates; pre-screen before the model;
+≥ 40 table rows; contacts test; run safety-redteam and fold gaps in.
+
+- M4: `contacts.ts` (all verified contacts) and the fallback part of `templates.ts` land in M4, because the
+  fallback must show the region's emergency number and numbers may only come from `contacts.ts`.
+  Escalation + refer templates and the contacts test come in M5 as planned.
+- M4 (temporary, removed in M5/M6): a model-flagged crisis fails closed to the fallback until escalation
+  templates exist. SDK error classes all map to `unexpected` until M6's full mapping.
+- M4: The model gets one user turn holding `{replyLanguage, history, message}` as JSON (SPEC §6.5); the
+  JSON text block is found by `type`, since Opus 5.5 returns thinking blocks first (researcher, SDK 1.10.0).
+- M4 smoke run (real key): F1 bedtime → `coach · routine · en`, 4 steps, check-in; 6.0 s.
 
 ## Open questions / risks
 - Local Node is 25.8.1; Vitest 5.1.1 engines are `^22.12 || ^24 || >=26` (CI uses Node 26). Policy above:
