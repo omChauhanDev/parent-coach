@@ -202,6 +202,43 @@ describe("model reply (AC-1, AC-7, AC-8, AC-9)", () => {
     },
   );
 
+  const AFTER_CRISIS = [
+    { role: "parent", text: "my child in danger right now" },
+    { role: "coach", text: "Get help now. Is everyone safe right now?" },
+  ] as const;
+
+  it.each([
+    ["medical, PK", "medical_emergency", "PK", "1122", "medicine"],
+    ["unclear type → general", "none", "AE", "999", "Stay with whoever"],
+  ] as const)(
+    "safety_check after a crisis → short safety-check card, not a repeat (%s)",
+    async (_n, crisisCategory, region, number, line) => {
+      create.mockResolvedValue(output({ risk: "safety_check", crisisCategory }));
+      const res = await post({
+        message: "how should i make him sleep he is angry",
+        history: AFTER_CRISIS,
+        region,
+      });
+      const raw = await res.clone().text();
+      const r = await reply(res);
+      expect(r).toMatchObject({ kind: "escalation", risk: "crisis" });
+      expect(r.escalation).toMatchObject({ source: "model", region });
+      expect(r.steps[0]).toContain(number);
+      expect(r.steps.join(" ")).toContain(line);
+      expect(r.followUp.text).toContain('"everyone is safe"');
+      expect(r.followUp.text).toContain("your question");
+      expect(raw).not.toMatch(/MODEL_/);
+    },
+  );
+
+  it("safety_check with no history → the full escalation card", async () => {
+    create.mockResolvedValue(output({ risk: "safety_check", crisisCategory: "none" }));
+    const r = await reply(await post({ message: "my child in danger right now" }));
+    expect(r).toMatchObject({ kind: "escalation", risk: "crisis" });
+    expect(r.escalation).toMatchObject({ category: "general", source: "model" });
+    expect(r.followUp.text).not.toContain("your question");
+  });
+
   it("refer with clean text → coach refer from model fields (AC-8)", async () => {
     create.mockResolvedValue(
       output({

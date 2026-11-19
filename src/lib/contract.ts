@@ -22,7 +22,8 @@ export const ChatRequest = z.object({
 
 // ---- Model output (sent as output_config.format; `risk` first so the model classifies before writing)
 export const ModelOutput = z.object({
-  risk: z.enum(["routine", "refer", "crisis"]),
+  // safety_check: an earlier turn was a crisis and the parent has not yet said everyone is safe
+  risk: z.enum(["routine", "refer", "crisis", "safety_check"]),
   crisisCategory: z.enum(["none", ...CrisisCategory.options]),
   summary: z.string().min(1).max(300),
   steps: z.array(z.string().min(1).max(220)).min(1).max(4),

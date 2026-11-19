@@ -5,6 +5,8 @@ import {
   buildEscalation,
   buildFallback,
   buildRefer,
+  buildSafetyCheck,
+  isSafetyCheck,
   LAST_RESORT,
   LAST_RESORT_REPLY,
 } from "@/lib/safety/templates";
@@ -38,6 +40,29 @@ describe("buildEscalation (SPEC §6.3)", () => {
     expect(reply.followUp.kind).toBe("question");
     // The UI shows the contacts ABOVE the steps, so the text must never point "below".
     expect(JSON.stringify(reply)).not.toMatch(/below|نیچے|neeche/i);
+  });
+});
+
+describe("buildSafetyCheck (SPEC §6.3)", () => {
+  it.each(escalationRows)("%s · %s · %s", (category, language, region) => {
+    const reply = buildSafetyCheck(category, language, region);
+    const full = buildEscalation(category, language, region, "model");
+    expect(CoachReply.safeParse(reply).success).toBe(true);
+    expect(reply).toMatchObject({ kind: "escalation", risk: "crisis", language });
+    expect(reply.escalation).toEqual(full.escalation);
+    // Still leads with the immediate-danger call; shorter than the full card; names the way out.
+    expect(reply.steps[0]).toBe(full.steps[0]);
+    expect(reply.steps).toHaveLength(2);
+    expect(reply.summary).not.toBe(full.summary);
+    expect(reply.followUp.kind).toBe("question");
+    expect(reply.followUp.text).toMatch(/"everyone is safe"|"سب محفوظ ہیں"|"sab mehfooz hain"/);
+    expect(isSafetyCheck(reply)).toBe(true);
+    expect(isSafetyCheck(full)).toBe(false);
+    expect(JSON.stringify(reply)).not.toMatch(/below|نیچے|neeche/i);
+  });
+  it.each(LANGUAGES)("the full card also names the way out (%s)", (language) => {
+    const full = buildEscalation("self_harm", language, "AE", "prescreen");
+    expect(full.followUp.text).toMatch(/"everyone is safe"|"سب محفوظ ہیں"|"sab mehfooz hain"/);
   });
 });
 

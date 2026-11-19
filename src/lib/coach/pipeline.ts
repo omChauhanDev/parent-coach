@@ -2,7 +2,13 @@ import { CoachReply, type ChatRequest, type Language, type ModelOutput } from "@
 import { detectLanguage } from "@/lib/language";
 import { postCheck } from "@/lib/safety/postcheck";
 import { preScreen } from "@/lib/safety/prescreen";
-import { buildEscalation, buildFallback, buildRefer, LAST_RESORT } from "@/lib/safety/templates";
+import {
+  buildEscalation,
+  buildFallback,
+  buildRefer,
+  buildSafetyCheck,
+  LAST_RESORT,
+} from "@/lib/safety/templates";
 import type { CoachModel, GenerateInput, ModelResult } from "@/lib/coach/model";
 import type { LogLine } from "@/lib/log";
 
@@ -76,10 +82,19 @@ async function decide(request: ChatRequest, language: Language, deps: ChatDeps):
   );
   if (!result.ok) return { reply: buildFallback(language, region), failure: result.reason };
 
-  // Triage gate: a crisis flag OR any category discards the model's text entirely.
+  // Triage gate: a crisis or safety-check flag OR any category discards the model's text entirely.
   const { output } = result;
-  if (output.risk === "crisis" || output.crisisCategory !== "none") {
-    const category = output.crisisCategory === "none" ? "general" : output.crisisCategory;
+  const category = output.crisisCategory === "none" ? "general" : output.crisisCategory;
+  // Earlier crisis, nothing new that is dangerous, safety not confirmed → ask before helping. With no
+  // history there is no earlier crisis to refer to, so the full card is shown instead.
+  if (output.risk === "safety_check" && request.history.length > 0) {
+    return { reply: buildSafetyCheck(category, language, region) };
+  }
+  if (
+    output.risk === "crisis" ||
+    output.risk === "safety_check" ||
+    output.crisisCategory !== "none"
+  ) {
     return { reply: buildEscalation(category, language, region, "model") };
   }
 

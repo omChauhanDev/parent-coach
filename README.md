@@ -81,8 +81,13 @@ ADRs [0001 layered safety](docs/decisions/0001-layered-fail-closed-safety.md) ·
 
 - **Escalations are pre-written** per category × language (`templates.ts`). They lead with "if anyone is in
   danger, call {emergency} now", then give the category's steps and at most three contacts. Each one
-  ends by asking whether everyone is safe and inviting the parent to continue, so a false positive is
-  recoverable.
+  ends by asking whether everyone is safe and says how to continue ("tell me everyone is safe"), so a
+  false positive is recoverable.
+- **After an escalation, the latest message decides.** A new or worsening danger gets the full card.
+  An everyday question with safety still unconfirmed gets a short **safety-check** card instead of the
+  same card again: call-now line, contacts, one fitting line ("don't give any medicine until a doctor or
+  the call handler says so"), and "tell me everyone is safe and I'll help with your question". Once
+  the parent confirms safety, it coaches. The model only chooses which card; it never writes them.
 - **The pre-screen prefers false positives.** Negated and "hypothetical" crisis statements still escalate.
   Everyday hyperbole stays quiet: "she's killing it at school", "main to mar gayi", "dimagh kharab kar
   diya". Both directions have table tests.
@@ -114,18 +119,17 @@ write numbers, and the post-check replaces any reply with a 3+ digit run or a nu
 Each layer is tested where it is cheapest and most deterministic. The real model is used only where
 nothing else can stand in for it. There are no snapshot tests.
 
-| Level              | What it proves                                                                                                                                                                                                                                                                                                                                                          | Where                                  |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Unit, table-driven | Pre-screen positives per category × language, euphemisms, buried and hypothetical disclosures, normalisation tricks; false-positive traps; language detection; contract parsing; post-check (doses, units, domains vs everyday text); every template; contacts match the SPEC table and have `https` sources                                                            | `src/**/*.test.ts`                     |
-| Route integration  | A fake Anthropic client throws the SDK's real error classes. Every failure mode returns 200 + fallback with the right logged reason. A pre-screen crisis makes 0 model calls. A model-flagged crisis discards model text. No message text is ever logged.                                                                                                               | `src/app/api/coach/route.test.ts`      |
-| E2E (Playwright)   | Everyday flow, including Clear resetting the history the model receives and empty web storage. Urdu and Roman Urdu crises with the region toggle. The crisis spec asserts the mocked API received **zero** requests.                                                                                                                                                    | `e2e/`                                 |
-| Eval (real model)  | 53 golden cases: 25 from an adversarial red-team pass, plus 7 follow-ups after an escalation. It reports which layer caught each crisis. It checks that the reply's script matches the language. It exits 1 on any missed crisis, or on a dose, number, URL, medicine name, diagnosis or legal step in model-written text. That check is independent of the post-check. | `evals/golden.json`, `scripts/eval.ts` |
+| Level              | What it proves                                                                                                                                                                                                                                                                                                                                                                                                  | Where                                  |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Unit, table-driven | Pre-screen positives per category × language, euphemisms, buried and hypothetical disclosures, normalisation tricks; false-positive traps; language detection; contract parsing; post-check (doses, units, domains vs everyday text); every template; contacts match the SPEC table and have `https` sources                                                                                                    | `src/**/*.test.ts`                     |
+| Route integration  | A fake Anthropic client throws the SDK's real error classes. Every failure mode returns 200 + fallback with the right logged reason. A pre-screen crisis makes 0 model calls. A model-flagged crisis discards model text. No message text is ever logged.                                                                                                                                                       | `src/app/api/coach/route.test.ts`      |
+| E2E (Playwright)   | Everyday flow, including Clear resetting the history the model receives and empty web storage. Urdu and Roman Urdu crises with the region toggle. The crisis spec asserts the mocked API received **zero** requests.                                                                                                                                                                                            | `e2e/`                                 |
+| Eval (real model)  | 57 golden cases: 25 from an adversarial red-team pass, plus 10 follow-ups after an escalation and an unclear "my child is in danger". It reports which layer caught each crisis. It checks that the reply's script matches the language. It exits 1 on any missed crisis, or on a dose, number, URL, medicine name, diagnosis or legal step in model-written text. That check is independent of the post-check. | `evals/golden.json`, `scripts/eval.ts` |
 
-Last eval run (2026-11-19, 53 cases): crisis recall **24/24**: 18 caught by the pre-screen and 6 only by
-the model (buried warning signs, coercive control, continuing danger after an earlier escalation). No
-leaks. There were two misses. An Urdu everyday reply hit the 19 s deadline and got the safe fallback; it
-passed on re-run. One expectation was corrected: a dose question straight after a self-harm disclosure
-now correctly stays escalated.
+Last eval run (2026-11-19, 57 cases): all pass, crisis recall **27/27**: 18 caught by the pre-screen and 9
+only by the model (buried warning signs, coercive control, unclear or continuing danger after an
+escalation, a safety check before a new question). No leaks. To save API credits, the last 10 cases
+were run in a separate batch on the same code.
 
 CI runs `pnpm check`, `pnpm build` and `pnpm e2e` on every push.
 
@@ -137,11 +141,10 @@ CI runs `pnpm check`, `pnpm build` and `pnpm e2e` on every push.
   and it works without a key. The cost is that it only catches explicit phrasing. Euphemisms and
   indirect warning signs depend on model triage, and `pnpm eval` measures that.
 - **Only the current message is pre-screened; the model triages it with history as context.** An
-  earlier crisis has already been answered with contacts, so it doesn't lock the conversation. If the
-  parent says everyone is safe or asks something new, the coach answers it. If danger continues or
-  safety is unclear, it escalates again. This keeps the escalation's "tell me more" promise and makes
-  a false positive recoverable. The cost is that recovery depends on the model, and eval cases cover
-  both directions.
+  earlier crisis doesn't lock the conversation, but help with a new question waits until the parent
+  says everyone is safe. That is one extra message for a parent who was never in danger, and it buys a
+  safety check before, say, a dose question that follows "my child is in danger". Recovery depends on
+  the model's triage, and eval cases cover both directions.
 - **One model call with triage inside the schema ([ADR 0002](docs/decisions/0002-single-call-structured-triage.md))**
   rather than a separate classifier: one request, one deadline and one mock, for a recall gain the
   eval hasn't shown to be needed.
@@ -161,7 +164,7 @@ CI runs `pnpm check`, `pnpm build` and `pnpm e2e` on every push.
 - Close the Pakistan gap: there is no verified 24/7 national mental-health or child-protection line.
   Add a scheduled job that re-fetches each contact's source page and fails when the number disappears.
 - Measure the pre-screen's false-positive rate on real, consented everyday messages, and grow the eval
-  set past 53 cases with more code-mixed and indirect disclosures. Run it nightly on a budget.
+  set past 57 cases with more code-mixed and indirect disclosures. Run it nightly on a budget.
 - Rate limiting, security headers, a streamed body-size limit (today the 16 KB check reads the body
   first) and a deployment. Stream coach text after the triage fields have been
   validated.

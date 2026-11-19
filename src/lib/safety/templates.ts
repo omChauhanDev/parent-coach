@@ -72,7 +72,7 @@ export const LAST_RESORT_REPLY: CoachReply = LAST_RESORT.AE;
 // Escalation (SPEC §6.3): care first → immediate action → category steps → safety question.
 // ---------------------------------------------------------------------------
 
-type EscalationCategory = CrisisCategory | "general";
+export type EscalationCategory = CrisisCategory | "general";
 
 /** Heading of the escalation banner in the UI. */
 export const ESCALATION_HEADING: Record<Language, string> = {
@@ -125,7 +125,7 @@ const ESCALATION: Record<Language, EscalationText> = {
       general: ["Stay with whoever is at risk and keep away from anything that could cause harm."],
     },
     followUp:
-      "Is everyone safe right now? If no one is in danger, tell me more and I'll help you plan the next step.",
+      'Is everyone safe right now? If so, tell me "everyone is safe" and what is happening, and I\'ll help you plan the next step.',
   },
   ur: {
     care: "مجھے بتانے کا شکریہ — آپ کو یہ سب اکیلے نہیں سنبھالنا۔",
@@ -161,7 +161,7 @@ const ESCALATION: Record<Language, EscalationText> = {
       general: ["خطرے میں موجود شخص کے ساتھ رہیں اور نقصان پہنچانے والی ہر چیز سے دور رہیں۔"],
     },
     followUp:
-      "کیا اس وقت سب محفوظ ہیں؟ اگر کسی کو خطرہ نہیں تو مزید بتائیں تاکہ اگلا قدم مل کر طے کیا جا سکے۔",
+      'کیا اس وقت سب محفوظ ہیں؟ اگر ہاں، تو لکھیں "سب محفوظ ہیں" اور بتائیں کیا ہو رہا ہے، تاکہ اگلا قدم مل کر طے کیا جا سکے۔',
   },
   roman_ur: {
     care: "Mujhe batane ka shukriya — aap ko yeh sab akele nahi sambhalna.",
@@ -200,7 +200,7 @@ const ESCALATION: Record<Language, EscalationText> = {
       ],
     },
     followUp:
-      "Kya is waqt sab mehfooz hain? Agar kisi ko khatra nahi to mazeed batayein taake agla qadam mil kar tay kiya ja sake.",
+      'Kya is waqt sab mehfooz hain? Agar haan, to likhein "sab mehfooz hain" aur batayein kya ho raha hai, taake agla qadam mil kar tay kiya ja sake.',
   },
 };
 
@@ -228,6 +228,83 @@ export function buildEscalation(
       contacts: escalationContacts(region, category, language),
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Safety check (SPEC §6.3): an earlier turn was a crisis and the parent asks something new without
+// saying everyone is safe. Shorter than the full card; names the way out instead of repeating it.
+// ---------------------------------------------------------------------------
+
+interface SafetyCheckText {
+  summary: string;
+  line: Record<EscalationCategory, string>;
+  followUp: string;
+}
+
+const SAFETY_CHECK: Record<Language, SafetyCheckText> = {
+  en: {
+    summary: "I'd like to help with your question, but first I need to know that everyone is safe.",
+    line: {
+      medical_emergency: "Don't give any medicine until a doctor or the call handler tells you to.",
+      self_harm: "Stay with them, and keep medicines and sharp objects out of reach.",
+      child_abuse: "Keep your child away from the person who may have hurt them.",
+      domestic_violence:
+        "If it isn't safe to talk, move somewhere safe first and keep your phone with you.",
+      general: "Stay with whoever is at risk and keep away from anything that could cause harm.",
+    },
+    followUp:
+      'Is everyone safe right now? If so, tell me "everyone is safe" and I\'ll help with your question.',
+  },
+  ur: {
+    summary: "آپ کے سوال میں مدد ضرور کی جائے گی، لیکن پہلے یہ جاننا ضروری ہے کہ سب محفوظ ہیں۔",
+    line: {
+      medical_emergency: "جب تک ڈاکٹر یا کال سننے والا نہ کہے، بچے کو کوئی دوا نہ دیں۔",
+      self_harm: "ان کے ساتھ رہیں، اور دوائیں اور تیز دھار چیزیں پہنچ سے دور رکھیں۔",
+      child_abuse: "بچے کو اس شخص سے دور رکھیں جس نے اسے نقصان پہنچایا ہو سکتا ہے۔",
+      domestic_violence:
+        "اگر بات کرنا محفوظ نہیں تو پہلے کسی محفوظ جگہ چلے جائیں اور فون اپنے پاس رکھیں۔",
+      general: "خطرے میں موجود شخص کے ساتھ رہیں اور نقصان پہنچانے والی ہر چیز سے دور رہیں۔",
+    },
+    followUp:
+      'کیا اس وقت سب محفوظ ہیں؟ اگر ہاں، تو لکھیں "سب محفوظ ہیں" — پھر آپ کے سوال میں مدد کی جائے گی۔',
+  },
+  roman_ur: {
+    summary:
+      "Aap ke sawal mein madad zaroor ki jayegi, lekin pehle yeh jaanna zaroori hai ke sab mehfooz hain.",
+    line: {
+      medical_emergency: "Jab tak doctor ya call sunne wala na kahe, bachay ko koi dawa na dein.",
+      self_harm: "Un ke saath rahein, aur dawaiyan aur tez dhaar cheezein pohanch se door rakhein.",
+      child_abuse: "Bachay ko us shakhs se door rakhein jis ne use nuqsan pohanchaya ho sakta hai.",
+      domestic_violence:
+        "Agar baat karna mehfooz nahi to pehle kisi mehfooz jagah chale jayein aur phone apne paas rakhein.",
+      general:
+        "Khatre mein mojood shakhs ke saath rahein aur nuqsan pohanchane wali har cheez se door rahein.",
+    },
+    followUp:
+      'Kya is waqt sab mehfooz hain? Agar haan, to likhein "sab mehfooz hain" — phir aap ke sawal mein madad ki jayegi.',
+  },
+};
+
+export function buildSafetyCheck(
+  category: EscalationCategory,
+  language: Language,
+  region: Region,
+): CoachReply {
+  const full = buildEscalation(category, language, region, "model");
+  const t = SAFETY_CHECK[language];
+  return {
+    ...full,
+    summary: t.summary,
+    steps: [full.steps[0] ?? emergencyLine(region, language), t.line[category]],
+    followUp: { kind: "question", text: t.followUp },
+  };
+}
+
+/** True when a reply is the safety-check card (used by `pnpm eval`). */
+export function isSafetyCheck(reply: CoachReply): boolean {
+  return (
+    reply.kind === "escalation" && reply.followUp.text === SAFETY_CHECK[reply.language].followUp
+  );
 }
 
 // ---------------------------------------------------------------------------

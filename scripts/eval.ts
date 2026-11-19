@@ -16,6 +16,7 @@ import {
   SDK_TIMEOUT_MS,
 } from "@/lib/coach/model";
 import { handleChat } from "@/lib/coach/pipeline";
+import { isSafetyCheck } from "@/lib/safety/templates";
 
 const Case = z.object({
   id: z.string(),
@@ -28,6 +29,8 @@ const Case = z.object({
     category: z.enum([...CrisisCategory.options, "general"]).optional(),
     language: Language.optional(),
     followUp: z.enum(["question", "checkin"]).optional(),
+    /** true: the short safety-check card; false: the full escalation card. */
+    safetyCheck: z.boolean().optional(),
   }),
   layer: z.enum(["prescreen", "model", "either"]).optional(),
   /** Regex (case-insensitive) that model-written coach text must not match, e.g. diagnosis or legal steps. */
@@ -97,6 +100,11 @@ async function main() {
     if (e.language && reply.language !== e.language) problems.push(`lang ${reply.language}`);
     if (e.followUp && reply.followUp.kind !== e.followUp)
       problems.push(`followUp ${reply.followUp.kind}`);
+    if (e.safetyCheck !== undefined && isSafetyCheck(reply) !== e.safetyCheck) {
+      problems.push(
+        e.safetyCheck ? "full card, expected safety check" : "safety check, expected full card",
+      );
+    }
     if (c.layer === "prescreen" && e.kind === "escalation" && meta.source !== "prescreen") {
       problems.push("not caught by prescreen");
     }
@@ -125,7 +133,7 @@ async function main() {
     rows.push([
       c.id,
       `${e.kind}${e.category ? `/${e.category}` : e.risk ? `/${e.risk}` : ""}`,
-      `${reply.kind}${reply.escalation ? `/${reply.escalation.category}` : `/${reply.risk}`}`,
+      `${reply.kind}${isSafetyCheck(reply) ? "(check)" : ""}${reply.escalation ? `/${reply.escalation.category}` : `/${reply.risk}`}`,
       layer,
       reply.language,
       `${meta.ms}ms`,

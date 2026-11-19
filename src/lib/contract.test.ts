@@ -56,6 +56,7 @@ describe("ModelOutput", () => {
   it.each([
     ["valid", ok, true],
     ["crisis with category", { ...ok, risk: "crisis", crisisCategory: "self_harm" }, true],
+    ["safety check", { ...ok, risk: "safety_check", crisisCategory: "none" }, true],
     ["unknown risk", { ...ok, risk: "high" }, false],
     ["unknown category", { ...ok, crisisCategory: "bullying" }, false],
     ["no steps", { ...ok, steps: [] }, false],

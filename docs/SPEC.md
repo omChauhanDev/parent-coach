@@ -48,9 +48,10 @@ Mixed-language messages get the dominant language by these rules.
 | F7 | Vague | "help" · "my child is difficult" | `coach` · `routine` · follow-up `question` asking age and situation |
 | F8 | Mixed language | "My beta 6 saal ka hai aur school jane se rota hai" | `coach` · `roman_ur` |
 | F9 | Model unavailable | timeout / no key / 429 | `fallback` · `unknown` · retry advice + emergency number; footer always visible |
+| F10 | After an escalation | "my child in danger right now" → "how should i make him sleep he is angry" → "everyone is safe now, it was a false alarm…" | unclear danger → `general` card · new everyday question without confirmed safety → short **safety-check** card · safety confirmed → `coach`; a new or worsening danger ("high dose paracetamol") → full card |
 
-Every escalation's follow-up asks about immediate safety and invites the parent to continue if no one is
-in danger, so a false positive is recoverable.
+Every escalation's follow-up asks about immediate safety and tells the parent how to continue ("tell me
+everyone is safe"), so a false positive is recoverable.
 
 ## 5. Contract
 `src/lib/contract.ts` — the single source of truth for request, model output and reply.
@@ -77,7 +78,8 @@ export const ChatRequest = z.object({
 
 // ---- Model output (sent as output_config.format; `risk` first so the model classifies before writing)
 export const ModelOutput = z.object({
-  risk: z.enum(["routine", "refer", "crisis"]),
+  // safety_check: an earlier turn was a crisis and the parent has not yet said everyone is safe
+  risk: z.enum(["routine", "refer", "crisis", "safety_check"]),
   crisisCategory: z.enum(["none", ...CrisisCategory.options]),
   summary: z.string().min(1).max(300),
   steps: z.array(z.string().min(1).max(220)).min(1).max(4),
@@ -123,6 +125,7 @@ export const ErrorBody = z.object({ error: z.literal("invalid_request"), message
 - `kind: "fallback"` ⇒ `risk: "unknown"`; text from `templates.ts`, including the region's emergency number.
 - `kind: "coach"` ⇒ `risk ∈ {routine, refer}`; text is validated + post-checked model output, or the fixed refer template.
 - Model says `risk: "crisis"`, **or** any `crisisCategory ≠ "none"` ⇒ escalation (`none` maps to `general`).
+- Model says `risk: "safety_check"` with history ⇒ the safety-check card (an escalation; without history ⇒ the full card).
 - Every response is parsed with `CoachReply` before it is sent.
 - HTTP: 200 for every `CoachReply` (including fallback); 400 + `ErrorBody` for invalid input. Never 500.
 
@@ -158,7 +161,8 @@ Written once per category × language in `templates.ts` (English below; Urdu and
 - **Immediate action first:** step 1 is always "If anyone is in danger right now, call {emergency} now."
 - **Category step(s):** self-harm — stay with them, move medicines and sharp objects out of reach, talk to a mental-health professional today. Abuse — listen, let the child tell it in their own words, it is never their fault, don't promise secrecy, don't confront the person or investigate, report to child protection. Domestic violence — plan a safe place, keep phone and documents close, you don't need to wait for an emergency. Medical — call now, stay with the child, follow the call handler, keep any packaging to show the medics.
 - **Never:** method details, diagnosis, medication advice, a promise of confidentiality.
-- **Follow-up (`question`):** "Is everyone safe right now? If no one is in danger, tell me more and I'll help you plan the next step."
+- **Follow-up (`question`):** "Is everyone safe right now? If so, tell me "everyone is safe" and what is happening, and I'll help you plan the next step."
+- **Safety check** (earlier crisis, the new message adds no danger, safety not confirmed): instead of repeating the full card — "I'd like to help with your question, but first I need to know that everyone is safe." · step 1 as above · one category line (medical: don't give any medicine until a doctor or the call handler says so) · "Is everyone safe right now? If so, tell me "everyone is safe" and I'll help with your question." Same contacts.
 - At most 3 contacts: emergency first, then category lines with coverage/hours notes.
 
 ### 6.4 The coach never
