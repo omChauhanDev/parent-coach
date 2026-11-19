@@ -2,12 +2,7 @@ import { CoachReply, type ChatRequest, type Language, type ModelOutput } from "@
 import { detectLanguage } from "@/lib/language";
 import { postCheck } from "@/lib/safety/postcheck";
 import { preScreen } from "@/lib/safety/prescreen";
-import {
-  buildEscalation,
-  buildFallback,
-  buildRefer,
-  LAST_RESORT_REPLY,
-} from "@/lib/safety/templates";
+import { buildEscalation, buildFallback, buildRefer, LAST_RESORT } from "@/lib/safety/templates";
 import type { CoachModel, GenerateInput, ModelResult } from "@/lib/coach/model";
 import type { LogLine } from "@/lib/log";
 
@@ -109,7 +104,7 @@ export async function handleChat(request: ChatRequest, deps: ChatDeps): Promise<
   }
 
   const checked = CoachReply.safeParse(decision.reply);
-  const reply = checked.success ? checked.data : LAST_RESORT_REPLY;
+  const reply = checked.success ? checked.data : LAST_RESORT[request.region];
   const failure = checked.success ? decision.failure : "unexpected";
 
   const meta: LogLine = {

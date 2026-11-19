@@ -5,6 +5,7 @@ import {
   buildEscalation,
   buildFallback,
   buildRefer,
+  LAST_RESORT,
   LAST_RESORT_REPLY,
 } from "@/lib/safety/templates";
 
@@ -60,4 +61,16 @@ describe("buildRefer and buildFallback", () => {
     expect(CoachReply.safeParse(LAST_RESORT_REPLY).success).toBe(true);
     expect(LAST_RESORT_REPLY).toMatchObject({ kind: "fallback", language: "en" });
   });
+  it.each([
+    ["AE", "999", "1122"],
+    ["PK", "1122", "999"],
+  ] as const)(
+    "last-resort reply for %s shows that region's numbers only",
+    (region, has, hasNot) => {
+      const reply = LAST_RESORT[region];
+      expect(CoachReply.safeParse(reply).success).toBe(true);
+      expect(reply.steps.join(" ")).toContain(has);
+      expect(reply.steps.join(" ")).not.toContain(hasNot);
+    },
+  );
 });

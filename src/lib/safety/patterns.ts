@@ -464,7 +464,7 @@ export const PATTERNS: readonly CrisisPattern[] = [
   {
     id: "en.dv.partner-hits",
     category: "domestic_violence",
-    source: r`${EN_PARTNER}${G}(?:hits|hit|beats|beat|slaps|slapped|punches|punched|kicks|kicked|pushes|pushed|shoves|shoved|chokes|choked|strangles|strangled|throws things at|hurts|hurt|attacks|attacked) (?:me|us|her|him|the kids|the children|my (?:son|daughter|kids|children))(?! at | in a | in the game)`,
+    source: r`${EN_PARTNER}${G}(?:hits|hit|beats|beat|slaps|slapped|punches|punched|kicks|kicked|pushes|pushed|shoves|shoved|chokes|choked|strangles|strangled|throws things at|hurts|hurt|attacks|attacked) (?:me|us|her|him|the kids|the children|my (?:son|daughter|kids|children))(?! at (?:chess|cards|carrom|ludo|cricket|tennis|badminton|football|squash|scrabble|monopoly|uno|fifa|pubg|(?:video |board |card )?games?|(?:his|her|their|my|our|your) own game)| in (?:a |the )?(?:game|match|race|chess|ludo|carrom|cards|arm wrestling|pillow fight))`,
   },
   {
     id: "en.dv.front-of-kids",

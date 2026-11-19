@@ -22,9 +22,13 @@ import { MODEL_DEADLINE_MS } from "@/lib/coach/pipeline";
 
 const create = vi.fn<MessagesClient["messages"]["create"]>();
 let model: CoachModel | null = null;
+let getModelThrows = false;
 
 vi.mock("@/lib/coach/anthropic-client", () => ({
-  getCoachModel: () => model,
+  getCoachModel: () => {
+    if (getModelThrows) throw new Error("client construction failed");
+    return model;
+  },
 }));
 
 const { POST } = await import("@/app/api/coach/route");
@@ -82,6 +86,7 @@ beforeEach(() => {
   create.mockReset();
   create.mockResolvedValue(output({}));
   model = createCoachModel({ messages: { create } }, "claude-opus-5-5");
+  getModelThrows = false;
   logs = [];
   vi.spyOn(console, "info").mockImplementation((line: unknown) => {
     logs.push(String(line));
@@ -296,6 +301,18 @@ describe("failure modes → fallback, HTTP 200, no details (AC-10)", () => {
     expect(r.steps.join(" ")).toContain("15");
     expect(raw).not.toMatch(/upstream detail|bad key|ECONNRESET|weird|req_test/);
     expect(logs.at(-1)).toContain(`"failure":"${failure}"`);
+  });
+
+  it("an unexpected throw in the route still shows the selected region's numbers", async () => {
+    getModelThrows = true;
+    const res = await post({ ...EVERYDAY, region: "PK" });
+    const raw = await res.clone().text();
+    const r = await reply(res);
+    expect(r).toMatchObject({ kind: "fallback", risk: "unknown" });
+    expect(r.steps.join(" ")).toContain("1122");
+    expect(r.steps.join(" ")).not.toContain("999");
+    expect(raw).not.toContain("client construction failed");
+    expect(logs.at(-1)).toContain('"failure":"unexpected"');
   });
 
   it("lets one slow SDK attempt use most of the deadline, still under 20 s (AC-14)", () => {

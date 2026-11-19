@@ -1,9 +1,9 @@
-import { ChatRequest, type ErrorBody } from "@/lib/contract";
+import { ChatRequest, type ErrorBody, type Region } from "@/lib/contract";
 import { getCoachModel } from "@/lib/coach/anthropic-client";
 import { handleChat } from "@/lib/coach/pipeline";
 import { logRequest } from "@/lib/log";
 import { MAX_BODY_BYTES } from "@/lib/limits";
-import { LAST_RESORT_REPLY } from "@/lib/safety/templates";
+import { LAST_RESORT, LAST_RESORT_REPLY } from "@/lib/safety/templates";
 
 function badRequest(message: string, started: number): Response {
   logRequest({ failure: "invalid_request", ms: Date.now() - started });
@@ -13,6 +13,7 @@ function badRequest(message: string, started: number): Response {
 
 export async function POST(request: Request): Promise<Response> {
   const started = Date.now();
+  let region: Region | null = null;
   try {
     const declared = Number(request.headers.get("content-length") ?? "0");
     if (declared > MAX_BODY_BYTES) return badRequest("Request body is too large.", started);
@@ -34,10 +35,11 @@ export async function POST(request: Request): Promise<Response> {
       return badRequest("Send a message of 1 to 1000 characters.", started);
     }
 
+    region = parsed.data.region;
     const { reply } = await handleChat(parsed.data, { model: getCoachModel(), log: logRequest });
     return Response.json(reply);
   } catch {
     logRequest({ failure: "unexpected", ms: Date.now() - started });
-    return Response.json(LAST_RESORT_REPLY);
+    return Response.json(region ? LAST_RESORT[region] : LAST_RESORT_REPLY);
   }
 }

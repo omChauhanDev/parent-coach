@@ -84,11 +84,11 @@ export function Chat() {
       }
       const error = ErrorBody.safeParse(json);
       push({ role: "notice", text: error.success ? error.data.message : UNREACHABLE });
-      setDraft(message);
+      setDraft((current) => current || message); // never overwrite what the parent typed meanwhile
     } catch {
       if (gen !== generation.current) return;
       push({ role: "notice", text: UNREACHABLE });
-      setDraft(message);
+      setDraft((current) => current || message);
     } finally {
       if (gen === generation.current) {
         inflight.current = null;

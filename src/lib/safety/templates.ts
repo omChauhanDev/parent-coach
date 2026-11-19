@@ -60,7 +60,13 @@ export function buildFallback(language: Language, region: Region): CoachReply {
 }
 
 /** Sent only if a reply we built ourselves fails `CoachReply` validation (ARCHITECTURE §2 step 9). */
-export const LAST_RESORT_REPLY: CoachReply = buildFallback("en", "AE");
+/** Pre-built per region, so even a last-resort reply shows the selected region's numbers. */
+export const LAST_RESORT: Readonly<Record<Region, CoachReply>> = {
+  AE: buildFallback("en", "AE"),
+  PK: buildFallback("en", "PK"),
+};
+/** For failures before the request (and so the region) has been parsed. */
+export const LAST_RESORT_REPLY: CoachReply = LAST_RESORT.AE;
 
 // ---------------------------------------------------------------------------
 // Escalation (SPEC §6.3): care first → immediate action → category steps → safety question.

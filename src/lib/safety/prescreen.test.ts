@@ -18,6 +18,26 @@ describe("preScreen — positives (category × language)", () => {
 
     // ---- English
     ["en med: not breathing", "Help my baby is not breathing properly", MED],
+    // contractions ('s / 'll / 'm) used to glue into "hes", "ill" and never match (final review B1)
+    ["contraction: he's choking", "He's choking!", MED],
+    ["contraction: she's choking", "she's choking, what do I do", MED],
+    ["contraction: the baby's choking", "the baby's choking", MED],
+    ["contraction: my son's choking", "my son's choking", MED],
+    ["contraction: curly he’s choking", "he’s choking", MED],
+    ["contraction: he's drowning", "He's drowning!", MED],
+    ["contraction: she's collapsed", "she's collapsed", MED],
+    ["contraction: I'll hurt my baby", "I'm scared I'll hurt my baby", SELF],
+    ["contraction: afraid I'll hurt", "I'm afraid I'll hurt my baby when she cries", SELF],
+    ["contraction: she'll hurt herself", "She says she'll hurt herself", SELF],
+    ["contraction: he'll cut himself", "He keeps saying he'll cut himself", SELF],
+    ["modifier apostrophe: can't breathe", "He can\u02BCt breathe", MED],
+    // partner + hit followed by "at" / "in a" used to be excluded wholesale
+    ["dv: beats me at least weekly", "my husband beats me at least once a week", DV],
+    ["dv: kicks me at night", "My husband kicks me at night", DV],
+    ["dv: slaps the kids at dinner", "my wife slaps the kids at dinner", DV],
+    ["dv: hits the kids in a temper", "my husband hits the kids in a temper", DV],
+    ["dv: hit me in a rage", "my husband hit me in a rage", DV],
+    ["dv: accented fiancé", "my fiancé hits me", DV],
     ["en med: swallowed battery", "My toddler swallowed a button battery 10 minutes ago", MED],
     ["en med: drank bleach", "she drank some bleach from under the sink", MED],
     ["en med: seizure", "My son is having a seizure what do I do", MED],
@@ -272,6 +292,16 @@ describe("preScreen — false-positive traps (must not match)", () => {
     ["die of embarrassment", "She wants to die of embarrassment when I sing", null],
     ["sharam se mar jaun", "Main to sharam se mar jaun agar usne phir kiya", null],
     ["it's choking me", "This routine is choking me, I have no time", null],
+    ["contraction: it's choking me", "It's choking me, this schedule", null],
+    ["contraction: she's killing it", "She's killing it at school this year", null],
+    [
+      "contraction: I'll kill him (venting)",
+      "I'll kill him if he draws on the wall again lol",
+      null,
+    ],
+    ["partner beats me at chess", "my husband beats me at chess every night", null],
+    ["partner beat me in a game", "my husband beat me in a game of ludo", null],
+    ["partner beat us at monopoly", "my wife beat us at monopoly again", null],
     ["does it harm the child", "Kya screen bachay ko nuqsan pohnchata hai?", null],
     ["empty after normalising", "  ؟؟ ...  ", null],
   ])("%s", (_name, input, expected) => {
