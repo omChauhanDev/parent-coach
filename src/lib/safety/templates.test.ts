@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { CoachReply, type CrisisCategory, type Language, type Region } from "@/lib/contract";
+import { flattenReply } from "@/lib/client/history";
 import { ESCALATION_CONTACTS } from "@/lib/safety/contacts";
 import {
   buildEscalation,
   buildFallback,
   buildRefer,
   buildSafetyCheck,
+  escalationCategoryOf,
   isSafetyCheck,
   LAST_RESORT,
   LAST_RESORT_REPLY,
@@ -89,7 +91,7 @@ describe("buildSafetyCheck (SPEC §6.3)", () => {
     expect(reply.escalation).toEqual(full.escalation);
     // Still leads with the immediate-danger call; shorter than the full card; names the way out.
     expect(reply.steps[0]).toBe(full.steps[0]);
-    expect(reply.steps).toHaveLength(2);
+    expect(reply.steps.length).toBeLessThanOrEqual(3);
     expect(reply.summary).not.toBe(full.summary);
     expect(reply.followUp.kind).toBe("question");
     expect(reply.followUp.text).toMatch(/"everyone is safe"|"سب محفوظ ہیں"|"sab mehfooz hain"/);
@@ -100,6 +102,23 @@ describe("buildSafetyCheck (SPEC §6.3)", () => {
   it.each(LANGUAGES)("the full card also names the way out (%s)", (language) => {
     const full = buildEscalation("self_harm", language, "AE", "prescreen");
     expect(full.followUp.text).toMatch(/"everyone is safe"|"سب محفوظ ہیں"|"sab mehfooz hain"/);
+  });
+});
+
+describe("escalationCategoryOf — reads back the card the client sent as a coach turn", () => {
+  it.each(escalationRows)(
+    "%s · %s · %s (full and follow-up card)",
+    (category, language, region) => {
+      const full = flattenReply(buildEscalation(category, language, region, "prescreen"));
+      const check = flattenReply(buildSafetyCheck(category, language, region));
+      expect(escalationCategoryOf(full)).toBe(category);
+      expect(escalationCategoryOf(check)).toBe(category);
+    },
+  );
+  it.each(LANGUAGES)("coach, refer and fallback turns are not cards (%s)", (language) => {
+    expect(escalationCategoryOf(flattenReply(buildRefer(language, "AE")))).toBeNull();
+    expect(escalationCategoryOf(flattenReply(buildFallback(language, "PK")))).toBeNull();
+    expect(escalationCategoryOf("Keep the same short routine every night.")).toBeNull();
   });
 });
 

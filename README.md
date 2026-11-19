@@ -83,11 +83,13 @@ ADRs [0001 layered safety](docs/decisions/0001-layered-fail-closed-safety.md) ·
   danger, call {emergency} now", then give the category's steps and at most three contacts. Each one
   ends by asking whether everyone is safe and says how to continue ("tell me everyone is safe"), so a
   false positive is recoverable.
-- **After an escalation, the latest message decides.** A new or worsening danger gets the full card.
-  An everyday question with safety still unconfirmed gets a short **safety-check** card instead of the
-  same card again: call-now line, contacts, one fitting line ("don't give any medicine until a doctor or
-  the call handler says so"), and "tell me everyone is safe and I'll help with your question". Once
-  the parent confirms safety, it coaches. The model only chooses which card; it never writes them.
+- **The same full card is never shown twice in a row.** After a card, the next message of the same
+  kind, whether a dose question, a sleep question or "he's still lying there", gets a short
+  **follow-up card**. It keeps the banner, the call-now line and the contacts, adds a fitting line
+  ("don't give any medicine until a doctor or the call handler says so"), and says "tell me everyone
+  is safe and I'll help with what you need". A different kind of danger gets its own full card. Once
+  the parent confirms safety, it coaches. The previous card is read back from our own template text
+  in the history (deterministic), and the model never writes any card.
 - **The pre-screen prefers false positives.** Negated and "hypothetical" crisis statements still escalate.
   Everyday hyperbole stays quiet: "she's killing it at school", "main to mar gayi", "dimagh kharab kar
   diya". Both directions have table tests.

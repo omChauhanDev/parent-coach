@@ -7,7 +7,9 @@ import {
   buildFallback,
   buildRefer,
   buildSafetyCheck,
+  escalationCategoryOf,
   LAST_RESORT,
+  type EscalationCategory,
 } from "@/lib/safety/templates";
 import type { CoachModel, GenerateInput, ModelResult } from "@/lib/coach/model";
 import type { LogLine } from "@/lib/log";
@@ -65,12 +67,37 @@ async function generateWithDeadline(
   }
 }
 
+/** Category of the escalation card in the most recent coach turn, if that turn was one. */
+function previousCard(history: ChatRequest["history"]): EscalationCategory | null {
+  const last = history.findLast((turn) => turn.role === "coach");
+  return last ? escalationCategoryOf(last.text) : null;
+}
+
+/**
+ * The same full card is never shown twice in a row: right after a card of the same category, the
+ * shorter follow-up card answers instead (call-now line, contacts, "tell me everyone is safe").
+ */
+function escalate(
+  category: EscalationCategory,
+  previous: EscalationCategory | null,
+  language: Language,
+  region: ChatRequest["region"],
+  source: "prescreen" | "model",
+): CoachReply {
+  // An unclear ("general") danger right after a specific card continues that card's category.
+  const effective = category === "general" && previous ? previous : category;
+  return effective === previous
+    ? buildSafetyCheck(effective, language, region, source)
+    : buildEscalation(effective, language, region, source);
+}
+
 async function decide(request: ChatRequest, language: Language, deps: ChatDeps): Promise<Decision> {
   const { region } = request;
+  const previous = previousCard(request.history);
 
   // L1: deterministic pre-screen of the current message only; a hit never reaches the model.
   const hit = preScreen(request.message);
-  if (hit) return { reply: buildEscalation(hit.category, language, region, "prescreen") };
+  if (hit) return { reply: escalate(hit.category, previous, language, region, "prescreen") };
 
   if (!deps.model) return { reply: buildFallback(language, region), failure: "config" };
 
@@ -88,14 +115,15 @@ async function decide(request: ChatRequest, language: Language, deps: ChatDeps):
   // Earlier crisis, nothing new that is dangerous, safety not confirmed → ask before helping. With no
   // history there is no earlier crisis to refer to, so the full card is shown instead.
   if (output.risk === "safety_check" && request.history.length > 0) {
-    return { reply: buildSafetyCheck(category, language, region) };
+    const ongoing = category === "general" && previous ? previous : category;
+    return { reply: buildSafetyCheck(ongoing, language, region) };
   }
   if (
     output.risk === "crisis" ||
     output.risk === "safety_check" ||
     output.crisisCategory !== "none"
   ) {
-    return { reply: buildEscalation(category, language, region, "model") };
+    return { reply: escalate(category, previous, language, region, "model") };
   }
 
   // L4: post-check of everything the model wrote.

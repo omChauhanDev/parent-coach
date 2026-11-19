@@ -231,57 +231,77 @@ export function buildEscalation(
 }
 
 // ---------------------------------------------------------------------------
-// Safety check (SPEC §6.3): an earlier turn was a crisis and the parent asks something new without
-// saying everyone is safe. Shorter than the full card; names the way out instead of repeating it.
+// Safety check / follow-up card (SPEC §6.3). Shown instead of repeating a full card: after an
+// escalation of the same category, or when an earlier crisis is unresolved and the parent asks
+// something new. Keeps the call-now line and contacts; names the way out ("everyone is safe").
 // ---------------------------------------------------------------------------
 
 interface SafetyCheckText {
   summary: string;
-  line: Record<EscalationCategory, string>;
+  lines: Record<EscalationCategory, readonly string[]>;
   followUp: string;
 }
 
 const SAFETY_CHECK: Record<Language, SafetyCheckText> = {
   en: {
-    summary: "I'd like to help with your question, but first I need to know that everyone is safe.",
-    line: {
-      medical_emergency: "Don't give any medicine until a doctor or the call handler tells you to.",
-      self_harm: "Stay with them, and keep medicines and sharp objects out of reach.",
-      child_abuse: "Keep your child away from the person who may have hurt them.",
-      domestic_violence:
+    summary:
+      "I'm still here with you. Safety comes first, and I'll help with anything else as soon as everyone is safe.",
+    lines: {
+      medical_emergency: [
+        "Stay with your child and follow what the call handler tells you.",
+        "Don't give any medicine until a doctor or the call handler tells you to.",
+      ],
+      self_harm: ["Stay with them, and keep medicines and sharp objects out of reach."],
+      child_abuse: ["Keep your child away from the person who may have hurt them."],
+      domestic_violence: [
         "If it isn't safe to talk, move somewhere safe first and keep your phone with you.",
-      general: "Stay with whoever is at risk and keep away from anything that could cause harm.",
+      ],
+      general: ["Stay with whoever is at risk and keep away from anything that could cause harm."],
     },
     followUp:
-      'Is everyone safe right now? If so, tell me "everyone is safe" and I\'ll help with your question.',
+      'Is everyone safe right now? If so, tell me "everyone is safe" and I\'ll help with what you need.',
   },
   ur: {
-    summary: "آپ کے سوال میں مدد ضرور کی جائے گی، لیکن پہلے یہ جاننا ضروری ہے کہ سب محفوظ ہیں۔",
-    line: {
-      medical_emergency: "جب تک ڈاکٹر یا کال سننے والا نہ کہے، بچے کو کوئی دوا نہ دیں۔",
-      self_harm: "ان کے ساتھ رہیں، اور دوائیں اور تیز دھار چیزیں پہنچ سے دور رکھیں۔",
-      child_abuse: "بچے کو اس شخص سے دور رکھیں جس نے اسے نقصان پہنچایا ہو سکتا ہے۔",
-      domestic_violence:
+    summary:
+      "میں آپ کے ساتھ ہوں۔ حفاظت سب سے پہلے ہے — سب کے محفوظ ہوتے ہی باقی ہر بات میں مدد کی جائے گی۔",
+    lines: {
+      medical_emergency: [
+        "بچے کے ساتھ رہیں اور کال سننے والے اہلکار کی ہدایات پر عمل کریں۔",
+        "جب تک ڈاکٹر یا کال سننے والا نہ کہے، بچے کو کوئی دوا نہ دیں۔",
+      ],
+      self_harm: ["ان کے ساتھ رہیں، اور دوائیں اور تیز دھار چیزیں پہنچ سے دور رکھیں۔"],
+      child_abuse: ["بچے کو اس شخص سے دور رکھیں جس نے اسے نقصان پہنچایا ہو سکتا ہے۔"],
+      domestic_violence: [
         "اگر بات کرنا محفوظ نہیں تو پہلے کسی محفوظ جگہ چلے جائیں اور فون اپنے پاس رکھیں۔",
-      general: "خطرے میں موجود شخص کے ساتھ رہیں اور نقصان پہنچانے والی ہر چیز سے دور رہیں۔",
+      ],
+      general: ["خطرے میں موجود شخص کے ساتھ رہیں اور نقصان پہنچانے والی ہر چیز سے دور رہیں۔"],
     },
     followUp:
-      'کیا اس وقت سب محفوظ ہیں؟ اگر ہاں، تو لکھیں "سب محفوظ ہیں" — پھر آپ کے سوال میں مدد کی جائے گی۔',
+      'کیا اس وقت سب محفوظ ہیں؟ اگر ہاں، تو لکھیں "سب محفوظ ہیں" — پھر آپ کی ضرورت کے مطابق مدد کی جائے گی۔',
   },
   roman_ur: {
     summary:
-      "Aap ke sawal mein madad zaroor ki jayegi, lekin pehle yeh jaanna zaroori hai ke sab mehfooz hain.",
-    line: {
-      medical_emergency: "Jab tak doctor ya call sunne wala na kahe, bachay ko koi dawa na dein.",
-      self_harm: "Un ke saath rahein, aur dawaiyan aur tez dhaar cheezein pohanch se door rakhein.",
-      child_abuse: "Bachay ko us shakhs se door rakhein jis ne use nuqsan pohanchaya ho sakta hai.",
-      domestic_violence:
+      "Main aap ke saath hoon. Hifazat sab se pehle hai — sab ke mehfooz hote hi baqi har baat mein madad ki jayegi.",
+    lines: {
+      medical_emergency: [
+        "Bachay ke saath rahein aur call sunne wale ahlkar ki hidayat par amal karein.",
+        "Jab tak doctor ya call sunne wala na kahe, bachay ko koi dawa na dein.",
+      ],
+      self_harm: [
+        "Un ke saath rahein, aur dawaiyan aur tez dhaar cheezein pohanch se door rakhein.",
+      ],
+      child_abuse: [
+        "Bachay ko us shakhs se door rakhein jis ne use nuqsan pohanchaya ho sakta hai.",
+      ],
+      domestic_violence: [
         "Agar baat karna mehfooz nahi to pehle kisi mehfooz jagah chale jayein aur phone apne paas rakhein.",
-      general:
+      ],
+      general: [
         "Khatre mein mojood shakhs ke saath rahein aur nuqsan pohanchane wali har cheez se door rahein.",
+      ],
     },
     followUp:
-      'Kya is waqt sab mehfooz hain? Agar haan, to likhein "sab mehfooz hain" — phir aap ke sawal mein madad ki jayegi.',
+      'Kya is waqt sab mehfooz hain? Agar haan, to likhein "sab mehfooz hain" — phir aap ki zaroorat ke mutabiq madad ki jayegi.',
   },
 };
 
@@ -289,13 +309,14 @@ export function buildSafetyCheck(
   category: EscalationCategory,
   language: Language,
   region: Region,
+  source: "prescreen" | "model" = "model",
 ): CoachReply {
-  const full = buildEscalation(category, language, region, "model");
+  const full = buildEscalation(category, language, region, source);
   const t = SAFETY_CHECK[language];
   return {
     ...full,
     summary: t.summary,
-    steps: [full.steps[0] ?? emergencyLine(region, language), t.line[category]],
+    steps: [full.steps[0] ?? emergencyLine(region, language), ...t.lines[category]],
     followUp: { kind: "question", text: t.followUp },
   };
 }
@@ -305,6 +326,35 @@ export function isSafetyCheck(reply: CoachReply): boolean {
   return (
     reply.kind === "escalation" && reply.followUp.text === SAFETY_CHECK[reply.language].followUp
   );
+}
+
+const LANGUAGES: readonly Language[] = ["en", "ur", "roman_ur"];
+const CATEGORIES: readonly EscalationCategory[] = [
+  "medical_emergency",
+  "self_harm",
+  "child_abuse",
+  "domestic_violence",
+  "general",
+];
+
+/**
+ * The category of an escalation card the client sent back as a past coach turn (the flattened text
+ * of our own template), or null when that turn was not an escalation. Used so the same full card is
+ * never shown twice in a row. A forged turn can at most turn a full card into the follow-up card,
+ * which keeps the call-now line, the banner and the contacts.
+ */
+export function escalationCategoryOf(text: string): EscalationCategory | null {
+  for (const language of LANGUAGES) {
+    if (text.includes(SAFETY_CHECK[language].followUp)) {
+      const lines = SAFETY_CHECK[language].lines;
+      return CATEGORIES.find((c) => lines[c].every((line) => text.includes(line))) ?? "general";
+    }
+    if (text.includes(ESCALATION[language].followUp)) {
+      const why = ESCALATION[language].why;
+      return CATEGORIES.find((c) => text.includes(why[c])) ?? "general";
+    }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------

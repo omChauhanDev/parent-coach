@@ -19,6 +19,8 @@ import {
   SDK_TIMEOUT_MS,
 } from "@/lib/coach/model";
 import { MODEL_DEADLINE_MS } from "@/lib/coach/pipeline";
+import { flattenReply } from "@/lib/client/history";
+import { buildEscalation } from "@/lib/safety/templates";
 
 const create = vi.fn<MessagesClient["messages"]["create"]>();
 let model: CoachModel | null = null;
@@ -226,7 +228,7 @@ describe("model reply (AC-1, AC-7, AC-8, AC-9)", () => {
       expect(r.steps[0]).toContain(number);
       expect(r.steps.join(" ")).toContain(line);
       expect(r.followUp.text).toContain('"everyone is safe"');
-      expect(r.followUp.text).toContain("your question");
+      expect(r.followUp.text).toContain("what you need");
       expect(raw).not.toMatch(/MODEL_/);
     },
   );
@@ -236,7 +238,73 @@ describe("model reply (AC-1, AC-7, AC-8, AC-9)", () => {
     const r = await reply(await post({ message: "my child in danger right now" }));
     expect(r).toMatchObject({ kind: "escalation", risk: "crisis" });
     expect(r.escalation).toMatchObject({ category: "general", source: "model" });
-    expect(r.followUp.text).not.toContain("your question");
+    expect(r.followUp.text).not.toContain("what you need");
+  });
+
+  // ---- the same full card is never shown twice in a row (user test runs 1 and 2)
+  const afterCard = (category: Parameters<typeof buildEscalation>[0], parent: string) => [
+    { role: "parent", text: parent },
+    { role: "coach", text: flattenReply(buildEscalation(category, "en", "AE", "model")) },
+  ];
+  const FELL = afterCard("medical_emergency", "oh my child is in danger he just fell on ground");
+
+  it.each([
+    ["dose question", "how much ml dose of paracetamol is ideal for a child at 3 years", "crisis"],
+    ["sleep question", "okay, how should i make him sleep whenever he is angry", "crisis"],
+    ["unclear-type follow-up", "he is still lying there", "crisis"],
+  ] as const)(
+    "after a full medical card, a model crisis on the %s → follow-up card, not the full card again",
+    async (_n, message, risk) => {
+      const crisisCategory = message.includes("still") ? "none" : "medical_emergency";
+      create.mockResolvedValue(output({ risk, crisisCategory }));
+      const res = await post({ message, history: FELL });
+      const raw = await res.clone().text();
+      const r = await reply(res);
+      const full = buildEscalation("medical_emergency", "en", "AE", "model");
+      expect(r).toMatchObject({ kind: "escalation", risk: "crisis" });
+      expect(r.escalation).toMatchObject({ category: "medical_emergency", source: "model" });
+      expect(r.summary).not.toBe(full.summary);
+      expect(r.steps[0]).toBe(full.steps[0]); // still leads with "call 998 now"
+      expect(r.steps.join(" ")).toContain("Don't give any medicine");
+      expect(r.followUp.text).toContain('"everyone is safe"');
+      expect(r.escalation?.contacts).toEqual(full.escalation?.contacts);
+      expect(raw).not.toMatch(/MODEL_/);
+    },
+  );
+
+  it("after a full medical card, a NEW kind of danger gets its own full card", async () => {
+    create.mockResolvedValue(output({ risk: "crisis", crisisCategory: "domestic_violence" }));
+    const r = await reply(
+      await post({ message: "and my husband keeps threatening us", history: FELL }),
+    );
+    expect(r).toEqual(buildEscalation("domestic_violence", "en", "AE", "model"));
+  });
+
+  it("after a full self-harm card, a pre-screen hit of the same kind → follow-up card, no model call", async () => {
+    const r = await reply(
+      await post({
+        message: "He says he wants to kill himself again",
+        history: afterCard("self_harm", "My 14-year-old says he wants to die"),
+      }),
+    );
+    expect(create).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ kind: "escalation" });
+    expect(r.escalation).toMatchObject({ category: "self_harm", source: "prescreen" });
+    expect(r.summary).not.toBe(buildEscalation("self_harm", "en", "AE", "prescreen").summary);
+    expect(r.followUp.text).toContain('"everyone is safe"');
+  });
+
+  it("with no earlier card, a pre-screen hit still gets the full card", async () => {
+    const r = await reply(await post({ message: "He says he wants to kill himself" }));
+    expect(r).toEqual(buildEscalation("self_harm", "en", "AE", "prescreen"));
+  });
+
+  it("after the parent confirms safety, the model's coaching is shown", async () => {
+    create.mockResolvedValue(output({ risk: "routine", crisisCategory: "none" }));
+    const r = await reply(
+      await post({ message: "everyone is safe now, how do I calm him at bedtime?", history: FELL }),
+    );
+    expect(r).toMatchObject({ kind: "coach", risk: "routine" });
   });
 
   it("refer with clean text → coach refer from model fields (AC-8)", async () => {

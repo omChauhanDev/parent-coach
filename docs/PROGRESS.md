@@ -4,7 +4,7 @@
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
 **Current milestone:** all milestones (M1–M11) complete + final review fixes · remaining: record the 2-minute video (SPEC §8)
-**Last updated:** 2026-11-19 13:35 IST
+**Last updated:** 2026-11-19 13:55 IST
 
 ## Status
 | # | Subject | Status | Time |
@@ -208,6 +208,20 @@ use the full deadline`.
   feeds is wrong for a feverish newborn (also `medical_emergency`). Rows: medical card keeps all earlier
   steps + adds the line (3 languages × 2 regions); other categories unchanged; verified the rows fail on
   the old template.
+
+- **User follow-up on run 2:** "it's about addressing the next question (whatever it is) after the full
+  medical card — it keeps showing the medical card even if the conversation continues." Rule (deterministic,
+  in the pipeline, no prompt change → no eval spend): **never the same full card twice in a row.** The
+  last coach turn is our own flattened template, so `escalationCategoryOf` reads its category back
+  (EN/UR/Roman, full or follow-up card). Same category next (model crisis, `safety_check`, or a pre-screen
+  hit; an unclear-type danger counts as the same) → the follow-up card (renamed text: "I'm still here
+  with you…", call-now line, category line(s) — medical: stay with the child + no medicine until told —
+  "tell me everyone is safe and I'll help with what you need"); a different category → its full card.
+  A forged history turn can at most swap a full card for the follow-up card (banner, call-now line and
+  contacts stay). Rows: parser round-trip 5 × 3 × 2 for both cards + non-cards → null; route: dose /
+  sleep / unclear follow-ups → follow-up card, new category → full card, same-category pre-screen hit →
+  follow-up card with no model call, first crisis → full card, confirmed safety → coach. The 4
+  no-repeat rows fail on the previous pipeline. `hist-still-unsafe` now expects the follow-up card.
 
 ## Open questions / risks
 - Local Node is 25.8.1; Vitest 5.1.1 engines are `^22.12 || ^24 || >=26` (CI uses Node 26). Policy above:
