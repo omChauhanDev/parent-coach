@@ -3,8 +3,8 @@
 **Deadline: HARD STOP 16:00 IST, Thu 19 Nov 2026** — everything built, reviewed, README written, pushed,
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
-**Current milestone:** M8 complete · next M9
-**Last updated:** 2026-11-19 09:55 IST
+**Current milestone:** M9 complete · next M10
+**Last updated:** 2026-11-19 10:05 IST
 
 ## Status
 | # | Subject | Status | Time |
@@ -17,7 +17,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
 | M6 | feat: add model triage and fail-closed fallbacks | done | 09:42 |
 | M7 | feat: render structured replies with rtl support | done | 09:48 |
 | M8 | test: add playwright e2e with mock anthropic api | done | 09:55 |
-| M9 | docs: add readme | todo | |
+| M9 | docs: add readme | done | 10:05 |
 | M10 | test: add golden eval set against real model | todo | |
 | M11 | feat: polish chat layout and add example prompts | todo | |
 
@@ -43,7 +43,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
   milestone) instead of inside M3; M3 still adds CI and its done-when (pushed + Actions green) is unchanged.
 
 ## Next step
-M9: README; agent-usage note (git-ignored); reviewer on the full diff since M1; fresh-clone check.
+M10: commit `evals/golden.json` (46 cases) + `scripts/eval.ts`; log the full run here.
 
 - M4: `contacts.ts` (all verified contacts) and the fallback part of `templates.ts` land in M4, because the
   fallback must show the region's emergency number and numbers may only come from `contacts.ts`.
@@ -119,6 +119,20 @@ M9: README; agent-usage note (git-ignored); reviewer on the full diff since M1; 
 - M8 reviewer: **Verdict: ship**; minor (the AC-16-labelled check could not fail — mutation-tested) fixed
   by asserting history turns via the mock and empty web storage. Reviewer also ran 30 repeated e2e runs
   (no flakes) and a simulated CI run (`pnpm build` then `CI=true pnpm e2e`).
+
+- M9 full-diff reviewer (M2–M8 + README): "fix first — B1". B1: a long Urdu conversation (UTF-8 2 bytes
+  per letter) could build a valid `ChatRequest` over the 16 KB body limit, so the server returned 400 and
+  the current message was never pre-screened → the client now drops the oldest history turns until the
+  body fits (`buildRequestBody`, shared `src/lib/limits.ts`, table test). M1: Clear during a pending
+  request let the late reply re-insert the cleared turn into history → generation ref + AbortController.
+  m1/m2: README said 20 s (code 19 s) and described eval files not yet committed → fixed; eval docs land
+  with M10. Code fixes ride in the M9 commit because the plan has no separate review-fix commit.
+  Re-review: **Verdict: ship** (its m3 — README test count / eval clause — fixed before commit).
+- M9 fresh-clone check (scratchpad, from GitHub): `pnpm install --frozen-lockfile && pnpm check` green
+  (376 tests); no `.env.local` or `notes/` in the clone. Agent-usage note written to `notes/agent-usage.md`
+  (git-ignored, not committed).
+- CI green on GitHub for every pushed milestone (M3–M8; the M6 run was cancelled by M7's push under
+  `concurrency: cancel-in-progress`, and M7's run covers it). M8's run includes Playwright e2e.
 
 ## Open questions / risks
 - Local Node is 25.8.1; Vitest 5.1.1 engines are `^22.12 || ^24 || >=26` (CI uses Node 26). Policy above:

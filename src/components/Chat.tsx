@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CoachReply, ErrorBody, type Region, type Turn } from "@/lib/contract";
-import { flattenReply, recentHistory } from "@/lib/client/history";
+import { buildRequestBody, flattenReply, recentHistory } from "@/lib/client/history";
+import { MESSAGE_LIMIT } from "@/lib/limits";
 import { detectLanguage } from "@/lib/language";
 import { LANG_TAG } from "@/lib/ui-text";
-import { Composer, MESSAGE_LIMIT } from "@/components/Composer";
+import { Composer } from "@/components/Composer";
 import { EmergencyFooter } from "@/components/EmergencyFooter";
 import { RegionToggle } from "@/components/RegionToggle";
 import { ReplyCard } from "@/components/ReplyCard";
@@ -27,6 +28,10 @@ export function Chat() {
   const nextId = useRef(0);
   const endRef = useRef<HTMLDivElement>(null);
   const lastReplyRef = useRef<HTMLLIElement>(null);
+  // Clear bumps the generation and aborts the request in flight, so a late reply can never put a
+  // cleared turn back into the history the model sees (AC-16).
+  const generation = useRef(0);
+  const inflight = useRef<AbortController | null>(null);
 
   // A new reply scrolls to its top (an escalation banner must be seen first); otherwise to the end.
   useEffect(() => {
@@ -49,6 +54,9 @@ export function Chat() {
   async function send() {
     const message = draft.trim();
     if (!message || message.length > MESSAGE_LIMIT || pending) return;
+    const gen = generation.current;
+    const controller = new AbortController();
+    inflight.current = controller;
     setPending(true);
     setDraft("");
     push({ role: "parent", text: message });
@@ -56,9 +64,11 @@ export function Chat() {
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message, history: recentHistory(history), region }),
+        body: buildRequestBody(message, history, region),
+        signal: controller.signal,
       });
       const json: unknown = await res.json().catch(() => null);
+      if (gen !== generation.current) return;
       const reply = CoachReply.safeParse(json);
       if (res.ok && reply.success) {
         push({ role: "coach", reply: reply.data });
@@ -75,14 +85,22 @@ export function Chat() {
       push({ role: "notice", text: error.success ? error.data.message : UNREACHABLE });
       setDraft(message);
     } catch {
+      if (gen !== generation.current) return;
       push({ role: "notice", text: UNREACHABLE });
       setDraft(message);
     } finally {
-      setPending(false);
+      if (gen === generation.current) {
+        inflight.current = null;
+        setPending(false);
+      }
     }
   }
 
   function clear() {
+    generation.current += 1;
+    inflight.current?.abort();
+    inflight.current = null;
+    setPending(false);
     setEntries([]);
     setHistory([]);
     setDraft("");

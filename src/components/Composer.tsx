@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type KeyboardEvent } from "react";
-
-export const MESSAGE_LIMIT = 1000;
+import { MESSAGE_LIMIT } from "@/lib/limits";
 
 interface ComposerProps {
   value: string;
