@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "SessionStart": [{ "matcher": "compact|resume|clear", "hooks": [{ "type": "command",
+      "command": "cd \"$CLAUDE_PROJECT_DIR\" && for f in docs/PROGRESS.md docs/PLAN.md; do [ -f \"$f\" ] && { echo \"=== $f ===\"; cat \"$f\"; }; done; true" }]}],
+    "PostToolUse": [{ "matcher": "Edit|Write", "hooks": [{ "type": "command",
+      "command": "jq -r '.tool_input.file_path' | grep -E '\\.(ts|tsx|json|md|css)$' | xargs -r npx --no-install prettier --write >/dev/null 2>&1; true" }]}]
+  }
+}
