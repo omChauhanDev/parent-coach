@@ -3,8 +3,8 @@
 **Deadline: HARD STOP 16:00 IST, Thu 19 Nov 2026** — everything built, reviewed, README written, pushed,
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
-**Current milestone:** M7 complete · next M8
-**Last updated:** 2026-11-19 09:48 IST
+**Current milestone:** M8 complete · next M9
+**Last updated:** 2026-11-19 09:55 IST
 
 ## Status
 | # | Subject | Status | Time |
@@ -16,7 +16,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
 | M5 | feat: add multilingual safety pre-screen | done | 09:31 |
 | M6 | feat: add model triage and fail-closed fallbacks | done | 09:42 |
 | M7 | feat: render structured replies with rtl support | done | 09:48 |
-| M8 | test: add playwright e2e with mock anthropic api | todo | |
+| M8 | test: add playwright e2e with mock anthropic api | done | 09:55 |
 | M9 | docs: add readme | todo | |
 | M10 | test: add golden eval set against real model | todo | |
 | M11 | feat: polish chat layout and add example prompts | todo | |
@@ -43,7 +43,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
   milestone) instead of inside M3; M3 still adds CI and its done-when (pushed + Actions green) is unchanged.
 
 ## Next step
-M8: mock Anthropic + Playwright (everyday, crisis with 0 model calls, PK toggle); CI runs e2e; reviewer.
+M9: README; agent-usage note (git-ignored); reviewer on the full diff since M1; fresh-clone check.
 
 - M4: `contacts.ts` (all verified contacts) and the fallback part of `templates.ts` land in M4, because the
   fallback must show the region's emergency number and numbers may only come from `contacts.ts`.
@@ -108,6 +108,17 @@ M8: mock Anthropic + Playwright (everyday, crisis with 0 model calls, PK toggle)
   (source `model`) — history is triaged by the model by design (SPEC §6.2); Clear resets it.
 - M7: composer does not truncate pasted text (a crisis at the end of a long paste must not be cut); it
   shows the count and blocks sending above 1000 characters instead.
+
+- M8 e2e (3 tests, 2 specs): everyday (mock wording rendered, 1 model call, follow-up sends 2 history
+  turns, Clear → next request sends 0 turns, web storage empty); Urdu crisis (RTL card, 999 + 800-725462
+  tel links, https sources, **0 model requests**); PK toggle + Roman Urdu crisis (footer 1122, Taskeen,
+  0 model requests). Next's route announcer also has `role="alert"`, so alert locators are scoped to the
+  reply card.
+- M8: in CI the Playwright web server runs only `next start` (CI builds in the step before); locally it
+  builds first. Mock adds `GET /__last` (history turns of the last request) beyond ADR 0003's endpoints.
+- M8 reviewer: **Verdict: ship**; minor (the AC-16-labelled check could not fail — mutation-tested) fixed
+  by asserting history turns via the mock and empty web storage. Reviewer also ran 30 repeated e2e runs
+  (no flakes) and a simulated CI run (`pnpm build` then `CI=true pnpm e2e`).
 
 ## Open questions / risks
 - Local Node is 25.8.1; Vitest 5.1.1 engines are `^22.12 || ^24 || >=26` (CI uses Node 26). Policy above:
