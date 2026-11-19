@@ -8,6 +8,7 @@ import { detectLanguage } from "@/lib/language";
 import { LANG_TAG } from "@/lib/ui-text";
 import { Composer } from "@/components/Composer";
 import { EmergencyFooter } from "@/components/EmergencyFooter";
+import { EmptyState } from "@/components/EmptyState";
 import { RegionToggle } from "@/components/RegionToggle";
 import { ReplyCard } from "@/components/ReplyCard";
 
@@ -111,7 +112,7 @@ export function Chat() {
       <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper/95 px-4 py-3 backdrop-blur sm:px-6">
         <div>
           <h1 className="text-xl font-bold tracking-tight">Parent Coach</h1>
-          <p className="text-sm text-muted">
+          <p className="hidden text-sm text-muted sm:block">
             Practical next steps, in English, <span lang="ur">اردو</span> or Roman Urdu
           </p>
         </div>
@@ -130,10 +131,12 @@ export function Chat() {
 
       <main className="flex-1 px-4 py-5 sm:px-6" aria-live="polite" aria-busy={pending}>
         {entries.length === 0 ? (
-          <p className="mt-8 max-w-prose text-muted">
-            Tell me what&apos;s happening and how old your child is. You&apos;ll get a short plan
-            and a check-in. If anyone is in danger, call the numbers below now.
-          </p>
+          <EmptyState
+            onPick={(text) => {
+              setDraft(text);
+              document.getElementById("message")?.focus();
+            }}
+          />
         ) : (
           <ol className="grid gap-4">
             {entries.map((entry, i) => (
