@@ -3,15 +3,15 @@
 **Deadline: HARD STOP 16:00 IST, Thu 19 Nov 2026** — everything built, reviewed, README written, pushed,
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
-**Current milestone:** M2 complete · next M3
-**Last updated:** 2026-11-19 08:57 IST
+**Current milestone:** M3 complete · next M4
+**Last updated:** 2026-11-19 08:58 IST
 
 ## Status
 | # | Subject | Status | Time |
 |---|---|---|---|
 | M1 | docs: add spec, architecture, plan and ADRs | done | 08:48 |
 | M2 | chore: scaffold next app with lint, test and hooks | done | 08:57 |
-| M3 | ci: add github actions check and build workflow | todo | |
+| M3 | ci: add github actions check and build workflow | done | 08:58 |
 | M4 | feat: add coach api with zod contract and basic ui | todo | |
 | M5 | feat: add multilingual safety pre-screen | todo | |
 | M6 | feat: add model triage and fail-closed fallbacks | todo | |
@@ -43,7 +43,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
   milestone) instead of inside M3; M3 still adds CI and its done-when (pushed + Actions green) is unchanged.
 
 ## Next step
-M3: `.github/workflows/ci.yml` (check + build on Node 26), push, `gh run watch` green.
+M4: `contract.ts`, `language.ts`, `coach/*`, `api/coach/route.ts`, bare page; contract + language tests.
 
 ## Open questions / risks
 - Local Node is 25.8.1; Vitest 5.1.1 engines are `^22.12 || ^24 || >=26` (CI uses Node 26). Policy above:
