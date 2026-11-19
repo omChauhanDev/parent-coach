@@ -9,7 +9,7 @@ never asked to write it.
 > Not a medical, legal or crisis service. It never diagnoses, names medicines or doses, or gives legal
 > steps. It refers the parent to people who can.
 
-<!-- Demo video: _link to be added_ -->
+**Demo video (2 min):** https://www.loom.com/share/35793f0dc0aa4085817928665b02da90
 
 ## Quickstart
 

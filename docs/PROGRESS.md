@@ -3,8 +3,8 @@
 **Deadline: HARD STOP 16:00 IST, Thu 19 Nov 2026** — everything built, reviewed, README written, pushed,
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
-**Current milestone:** all milestones (M1–M11) complete + final review fixes · remaining: record the 2-minute video (SPEC §8)
-**Last updated:** 2026-11-19 13:55 IST
+**Current milestone:** complete · M1–M11 + final review fixes + demo video (Loom link in README)
+**Last updated:** 2026-11-19 15:34 IST
 
 ## Status
 | # | Subject | Status | Time |
