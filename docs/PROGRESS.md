@@ -3,8 +3,8 @@
 **Deadline: HARD STOP 16:00 IST, Thu 19 Nov 2026** — everything built, reviewed, README written, pushed,
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
-**Current milestone:** M4 complete · next M5
-**Last updated:** 2026-11-19 09:05 IST
+**Current milestone:** M5 complete · next M6
+**Last updated:** 2026-11-19 09:31 IST
 
 ## Status
 | # | Subject | Status | Time |
@@ -13,7 +13,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
 | M2 | chore: scaffold next app with lint, test and hooks | done | 08:57 |
 | M3 | ci: add github actions check and build workflow | done (CI green) | 08:58 |
 | M4 | feat: add coach api with zod contract and basic ui | done | 09:05 |
-| M5 | feat: add multilingual safety pre-screen | todo | |
+| M5 | feat: add multilingual safety pre-screen | done | 09:31 |
 | M6 | feat: add model triage and fail-closed fallbacks | todo | |
 | M7 | feat: render structured replies with rtl support | todo | |
 | M8 | test: add playwright e2e with mock anthropic api | todo | |
@@ -43,8 +43,8 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
   milestone) instead of inside M3; M3 still adds CI and its done-when (pushed + Actions green) is unchanged.
 
 ## Next step
-M5: `safety/{normalize,patterns,prescreen}.ts` + escalation/refer templates; pre-screen before the model;
-≥ 40 table rows; contacts test; run safety-redteam and fold gaps in.
+M6: triage gate, `postcheck.ts`, full SDK error mapping, 19 s deadline, route integration tests for every
+ARCHITECTURE §4 row; reviewer on the staged diff.
 
 - M4: `contacts.ts` (all verified contacts) and the fallback part of `templates.ts` land in M4, because the
   fallback must show the region's emergency number and numbers may only come from `contacts.ts`.
@@ -54,6 +54,23 @@ M5: `safety/{normalize,patterns,prescreen}.ts` + escalation/refer templates; pre
 - M4: The model gets one user turn holding `{replyLanguage, history, message}` as JSON (SPEC §6.5); the
   JSON text block is found by `type`, since Opus 5.5 returns thinking blocks first (researcher, SDK 1.10.0).
 - M4 smoke run (real key): F1 bedtime → `coach · routine · en`, 4 steps, check-in; 6.0 s.
+
+- M5 pre-screen: 120+ table rows (EN/UR/Roman positives per category, buried, hypothetical, negated,
+  injection, normalisation variants, SPEC §8 strings) + 45 false-positive traps. Patterns are phrase-level
+  (person + act, age + fever, partner + verb); everyday sibling/toddler hitting, venting ("I'm going to
+  kill him if he draws on the wall") and Urdu hyperbole stay quiet.
+- M5 deliberate false positives (policy prefers them): a child saying "I want to die", "choking on food",
+  "I can't breathe", "child abuse" in an information question, "cousin chherta". Each escalation invites
+  the parent to continue if no one is in danger.
+- M5 safety-redteam (25 cases): 10 pre-screen misses + 7 everyday false positives found and all fixed
+  (incl. two real bugs: Roman `ghalat jagah` could never match; squeezing 3+ letters to one broke double
+  vowels, so the matcher now tries both 1- and 2-letter squeezes). Invisible format characters (ZWSP,
+  soft hyphen, word joiner) are stripped. Code-mixed English verbs in Urdu/Roman DV sentences are caught.
+  Remaining model-layer case: rt-04 (buried giving-away + apology notes), with F4 — both go to M10 evals.
+- M5: F4 ("gave away all her favourite things…") is intentionally NOT a pre-screen pattern, so SPEC F4's
+  expected `source: model` holds.
+- M5: escalation step 1 uses the category's first contact (AE medical → 998, PK medical/self-harm → 1122);
+  the fallback/refer danger line uses the region's first two footer numbers.
 
 ## Open questions / risks
 - Local Node is 25.8.1; Vitest 5.1.1 engines are `^22.12 || ^24 || >=26` (CI uses Node 26). Policy above:

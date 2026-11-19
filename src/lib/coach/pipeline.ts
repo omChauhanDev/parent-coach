@@ -1,6 +1,7 @@
 import { CoachReply, type ChatRequest, type Language, type ModelOutput } from "@/lib/contract";
 import { detectLanguage } from "@/lib/language";
-import { buildFallback, LAST_RESORT_REPLY } from "@/lib/safety/templates";
+import { preScreen } from "@/lib/safety/prescreen";
+import { buildEscalation, buildFallback, LAST_RESORT_REPLY } from "@/lib/safety/templates";
 import type { CoachModel } from "@/lib/coach/model";
 import type { LogLine } from "@/lib/log";
 
@@ -34,6 +35,11 @@ function coachReply(output: ModelOutput, language: Language): CoachReply {
 
 async function decide(request: ChatRequest, language: Language, deps: ChatDeps): Promise<Decision> {
   const { region } = request;
+
+  // L1: deterministic pre-screen of the current message only; a hit never reaches the model.
+  const hit = preScreen(request.message);
+  if (hit) return { reply: buildEscalation(hit.category, language, region, "prescreen") };
+
   if (!deps.model) return { reply: buildFallback(language, region), failure: "config" };
 
   const result = await deps.model.generate({
