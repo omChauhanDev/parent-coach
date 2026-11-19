@@ -35,6 +35,8 @@ describe("buildEscalation (SPEC §6.3)", () => {
       ESCALATION_CONTACTS[region][category].map((c) => c.number),
     );
     expect(reply.followUp.kind).toBe("question");
+    // The UI shows the contacts ABOVE the steps, so the text must never point "below".
+    expect(JSON.stringify(reply)).not.toMatch(/below|نیچے|neeche/i);
   });
 });
 

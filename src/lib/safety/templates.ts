@@ -104,17 +104,17 @@ const ESCALATION: Record<Language, EscalationText> = {
       self_harm: [
         "Don't leave them alone — stay with them, or ask someone you trust to.",
         "Move medicines and sharp objects out of reach.",
-        "Talk to a mental-health professional today; the lines below can help, including if these thoughts are your own.",
+        "Talk to a mental-health professional today; the helplines listed above can help, including if these thoughts are your own.",
       ],
       child_abuse: [
         "Listen calmly, let your child tell it in their own words, and tell them it is never their fault.",
         "Don't promise to keep it secret, and don't confront the person or investigate yourself.",
-        "Report it to child protection (below) so trained people can help keep your child safe.",
+        "Report it to child protection (number above) so trained people can help keep your child safe.",
       ],
       domestic_violence: [
         "Plan a safe place you and the children can go, and someone you can call.",
         "Keep your phone, ID documents and some money close to you.",
-        "You don't need to wait for an emergency — the lines below can help you plan.",
+        "You don't need to wait for an emergency — the helplines listed above can help you plan.",
       ],
       general: ["Stay with whoever is at risk and keep away from anything that could cause harm."],
     },
@@ -140,17 +140,17 @@ const ESCALATION: Record<Language, EscalationText> = {
       self_harm: [
         "انہیں اکیلا نہ چھوڑیں — ان کے ساتھ رہیں، یا کسی بھروسے والے شخص کو ساتھ رہنے کو کہیں۔",
         "دوائیاں اور تیز دھار چیزیں پہنچ سے دور کر دیں۔",
-        "آج ہی کسی ماہر نفسیات سے بات کریں؛ نیچے دی گئی ہیلپ لائنز مدد کر سکتی ہیں، چاہے یہ خیالات آپ کے اپنے ہوں۔",
+        "آج ہی کسی ماہر نفسیات سے بات کریں؛ اوپر دی گئی ہیلپ لائنز مدد کر سکتی ہیں، چاہے یہ خیالات آپ کے اپنے ہوں۔",
       ],
       child_abuse: [
         "تحمل سے سنیں، بچے کو اپنے الفاظ میں بتانے دیں، اور انہیں بتائیں کہ یہ کبھی ان کی غلطی نہیں۔",
         "راز رکھنے کا وعدہ نہ کریں، اور اس شخص کا سامنا یا خود تفتیش نہ کریں۔",
-        "چائلڈ پروٹیکشن کو اطلاع دیں (نمبر نیچے ہیں) تاکہ تربیت یافتہ لوگ بچے کو محفوظ رکھنے میں مدد کر سکیں۔",
+        "چائلڈ پروٹیکشن کو اطلاع دیں (نمبر اوپر دیا گیا ہے) تاکہ تربیت یافتہ لوگ بچے کو محفوظ رکھنے میں مدد کر سکیں۔",
       ],
       domestic_violence: [
         "کوئی محفوظ جگہ طے کریں جہاں آپ اور بچے جا سکیں، اور کوئی ایسا شخص جسے آپ کال کر سکیں۔",
         "اپنا فون، شناختی دستاویزات اور کچھ رقم اپنے پاس رکھیں۔",
-        "ایمرجنسی کا انتظار کرنا ضروری نہیں — نیچے دی گئی ہیلپ لائنز منصوبہ بنانے میں مدد کر سکتی ہیں۔",
+        "ایمرجنسی کا انتظار کرنا ضروری نہیں — اوپر دی گئی ہیلپ لائنز منصوبہ بنانے میں مدد کر سکتی ہیں۔",
       ],
       general: ["خطرے میں موجود شخص کے ساتھ رہیں اور نقصان پہنچانے والی ہر چیز سے دور رہیں۔"],
     },
@@ -177,17 +177,17 @@ const ESCALATION: Record<Language, EscalationText> = {
       self_harm: [
         "Unhein akela na chhorein — un ke saath rahein, ya kisi bharose wale shakhs ko saath rehne ko kahein.",
         "Dawaiyan aur tez dhaar cheezein pohanch se door kar dein.",
-        "Aaj hi kisi mahir-e-nafsiyat se baat karein; neeche di gayi helplines madad kar sakti hain, chahe yeh khayalat aap ke apne hon.",
+        "Aaj hi kisi mahir-e-nafsiyat se baat karein; upar di gayi helplines madad kar sakti hain, chahe yeh khayalat aap ke apne hon.",
       ],
       child_abuse: [
         "Tahammul se sunein, bachay ko apne alfaaz mein batane dein, aur unhein batayein ke yeh kabhi un ki ghalti nahi.",
         "Raaz rakhne ka waada na karein, aur us shakhs ka saamna ya khud tafteesh na karein.",
-        "Child protection ko ittila dein (number neeche hain) taake tarbiyat yafta log bachay ko mehfooz rakhne mein madad kar sakein.",
+        "Child protection ko ittila dein (number upar diya gaya hai) taake tarbiyat yafta log bachay ko mehfooz rakhne mein madad kar sakein.",
       ],
       domestic_violence: [
         "Koi mehfooz jagah tay karein jahan aap aur bachay ja sakein, aur koi aisa shakhs jise aap call kar sakein.",
         "Apna phone, shanakhti documents aur kuch raqam apne paas rakhein.",
-        "Emergency ka intezar zaroori nahi — neeche di gayi helplines plan banane mein madad kar sakti hain.",
+        "Emergency ka intezar zaroori nahi — upar di gayi helplines plan banane mein madad kar sakti hain.",
       ],
       general: [
         "Khatre mein mojood shakhs ke saath rahein aur nuqsan pohanchane wali har cheez se door rahein.",

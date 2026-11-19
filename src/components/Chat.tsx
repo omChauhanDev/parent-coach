@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CoachReply, ErrorBody, type Region, type Turn } from "@/lib/contract";
 import { flattenReply, recentHistory } from "@/lib/client/history";
+import { detectLanguage } from "@/lib/language";
+import { LANG_TAG } from "@/lib/ui-text";
+import { Composer, MESSAGE_LIMIT } from "@/components/Composer";
+import { EmergencyFooter } from "@/components/EmergencyFooter";
+import { RegionToggle } from "@/components/RegionToggle";
+import { ReplyCard } from "@/components/ReplyCard";
 
-type Entry =
-  | { id: number; role: "parent"; text: string }
-  | { id: number; role: "coach"; reply: CoachReply }
-  | { id: number; role: "error"; text: string };
+type EntryInput =
+  | { role: "parent"; text: string }
+  | { role: "coach"; reply: CoachReply }
+  | { role: "notice"; text: string };
+type Entry = EntryInput & { id: number };
 
-let nextId = 0;
+const UNREACHABLE = "Couldn't reach the coach. Check your connection and send again.";
 
 export function Chat() {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -17,23 +24,44 @@ export function Chat() {
   const [draft, setDraft] = useState("");
   const [region, setRegion] = useState<Region>("AE");
   const [pending, setPending] = useState(false);
+  const nextId = useRef(0);
+  const endRef = useRef<HTMLDivElement>(null);
+  const lastReplyRef = useRef<HTMLLIElement>(null);
+
+  // A new reply scrolls to its top (an escalation banner must be seen first); otherwise to the end.
+  useEffect(() => {
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth";
+    const last = entries.at(-1);
+    if (last?.role === "coach" && !pending) {
+      lastReplyRef.current?.scrollIntoView({ behavior, block: "start" });
+    } else {
+      endRef.current?.scrollIntoView({ behavior, block: "end" });
+    }
+  }, [entries, pending]);
+
+  function push(entry: EntryInput) {
+    const id = nextId.current++;
+    setEntries((list) => [...list, { ...entry, id }]);
+  }
 
   async function send() {
     const message = draft.trim();
-    if (!message || message.length > 1000 || pending) return;
+    if (!message || message.length > MESSAGE_LIMIT || pending) return;
     setPending(true);
-    setEntries((e) => [...e, { id: nextId++, role: "parent", text: message }]);
     setDraft("");
+    push({ role: "parent", text: message });
     try {
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message, history: recentHistory(history), region }),
       });
-      const json: unknown = await res.json();
+      const json: unknown = await res.json().catch(() => null);
       const reply = CoachReply.safeParse(json);
       if (res.ok && reply.success) {
-        setEntries((e) => [...e, { id: nextId++, role: "coach", reply: reply.data }]);
+        push({ role: "coach", reply: reply.data });
         setHistory((h) =>
           recentHistory([
             ...h,
@@ -41,80 +69,95 @@ export function Chat() {
             { role: "coach", text: flattenReply(reply.data) },
           ]),
         );
-      } else {
-        const err = ErrorBody.safeParse(json);
-        setEntries((e) => [
-          ...e,
-          {
-            id: nextId++,
-            role: "error",
-            text: err.success ? err.data.message : "Couldn't reach the coach — try again.",
-          },
-        ]);
+        return;
       }
+      const error = ErrorBody.safeParse(json);
+      push({ role: "notice", text: error.success ? error.data.message : UNREACHABLE });
+      setDraft(message);
     } catch {
-      setEntries((e) => [
-        ...e,
-        { id: nextId++, role: "error", text: "Couldn't reach the coach — try again." },
-      ]);
+      push({ role: "notice", text: UNREACHABLE });
+      setDraft(message);
     } finally {
       setPending(false);
     }
   }
 
+  function clear() {
+    setEntries([]);
+    setHistory([]);
+    setDraft("");
+  }
+
   return (
-    <div className="flex flex-col gap-4">
-      <label className="flex items-center gap-2 text-sm">
-        Region
-        <select value={region} onChange={(e) => setRegion(e.target.value as Region)}>
-          <option value="AE">UAE</option>
-          <option value="PK">Pakistan</option>
-        </select>
-      </label>
-      <ol className="flex flex-col gap-3">
-        {entries.map((entry) => (
-          <li key={entry.id} dir="auto">
-            {entry.role === "coach" ? (
-              <div
-                className="rounded border p-3"
-                lang={entry.reply.language === "ur" ? "ur" : "en"}
+    <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col">
+      <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper/95 px-4 py-3 backdrop-blur sm:px-6">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Parent Coach</h1>
+          <p className="text-sm text-muted">
+            Practical next steps, in English, <span lang="ur">اردو</span> or Roman Urdu
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <RegionToggle region={region} onChange={setRegion} />
+          <button
+            type="button"
+            onClick={clear}
+            disabled={entries.length === 0 && !draft}
+            className="min-h-9 rounded-full px-3 text-sm font-bold text-muted underline-offset-2 hover:underline disabled:opacity-40"
+          >
+            Clear conversation
+          </button>
+        </div>
+      </header>
+
+      <main className="flex-1 px-4 py-5 sm:px-6" aria-live="polite" aria-busy={pending}>
+        {entries.length === 0 ? (
+          <p className="mt-8 max-w-prose text-muted">
+            Tell me what&apos;s happening and how old your child is. You&apos;ll get a short plan
+            and a check-in. If anyone is in danger, call the numbers below now.
+          </p>
+        ) : (
+          <ol className="grid gap-4">
+            {entries.map((entry, i) => (
+              <li
+                key={entry.id}
+                ref={i === entries.length - 1 ? lastReplyRef : undefined}
+                className="scroll-mt-40 sm:scroll-mt-24"
               >
-                <p className="text-xs opacity-60">
-                  {entry.reply.kind} · {entry.reply.risk} · {entry.reply.language}
-                </p>
-                <p>{entry.reply.summary}</p>
-                <ol className="list-decimal ps-5">
-                  {entry.reply.steps.map((step, i) => (
-                    <li key={i}>{step}</li>
-                  ))}
-                </ol>
-                <p className="italic">{entry.reply.followUp.text}</p>
-              </div>
-            ) : (
-              <p className={entry.role === "error" ? "text-red-700" : "font-medium"}>
-                {entry.text}
-              </p>
-            )}
-          </li>
-        ))}
-      </ol>
-      <textarea
-        dir="auto"
-        className="rounded border p-2"
-        rows={3}
-        maxLength={1000}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        aria-label="Your message"
-      />
-      <button
-        type="button"
-        className="rounded border px-4 py-2"
-        disabled={pending || !draft.trim()}
-        onClick={send}
-      >
-        {pending ? "Thinking…" : "Send"}
-      </button>
+                {entry.role === "coach" ? (
+                  <ReplyCard reply={entry.reply} />
+                ) : entry.role === "parent" ? (
+                  <p
+                    dir="auto"
+                    lang={LANG_TAG[detectLanguage(entry.text)]}
+                    className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-brand px-4 py-2.5 whitespace-pre-wrap text-brand-ink"
+                  >
+                    {entry.text}
+                  </p>
+                ) : (
+                  <p
+                    role="status"
+                    className="rounded-xl border border-line bg-surface px-4 py-3 text-sm"
+                  >
+                    {entry.text}
+                  </p>
+                )}
+              </li>
+            ))}
+            {pending ? (
+              <li className="text-sm text-muted" aria-label="The coach is writing a reply">
+                <span className="inline-block animate-pulse">The coach is writing…</span>
+              </li>
+            ) : null}
+          </ol>
+        )}
+        <div ref={endRef} />
+      </main>
+
+      <div className="sticky bottom-0 grid gap-3 border-t border-line bg-paper/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-6">
+        <Composer value={draft} pending={pending} onChange={setDraft} onSend={send} />
+        <EmergencyFooter region={region} />
+      </div>
     </div>
   );
 }

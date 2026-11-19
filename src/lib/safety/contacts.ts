@@ -85,7 +85,7 @@ export const CONTACTS = {
   aeSakina: {
     label: {
       en: "800-SAKINA mental health line (Department of Health Abu Dhabi)",
-      ur: "ذہنی صحت ہیلپ لائن 800-SAKINA (محکمہ صحت ابوظہبی)",
+      ur: "سکینہ ذہنی صحت ہیلپ لائن (محکمہ صحت ابوظہبی)",
       roman_ur: "Zehni sehat helpline 800-SAKINA (Department of Health Abu Dhabi)",
     },
     number: "800-725462",

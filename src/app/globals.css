@@ -1,23 +1,94 @@
 @import "tailwindcss";
 
+/*
+ * Parent Coach — quiet, cool, legible at 2 a.m. Peacock teal carries the coach; red is reserved
+ * for crisis so an escalation is unmistakable. Marigold is only the keyboard focus ring.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --paper: #f1f5f4;
+  --surface: #ffffff;
+  --ink: #16252a;
+  --muted: #56686d;
+  --line: #d3dedc;
+  --brand: #1d5a56;
+  --brand-ink: #ffffff;
+  --brand-soft: #e1eeeb;
+  --alarm: #a3190f;
+  --alarm-ink: #ffffff;
+  --alarm-soft: #fcebe8;
+  --focus: #c98a00;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #0d1618;
+    --surface: #142226;
+    --ink: #e3ecea;
+    --muted: #9db1ae;
+    --line: #293c3f;
+    --brand: #7cc4b8;
+    --brand-ink: #0d1618;
+    --brand-soft: #1b3532;
+    --alarm: #ff9b8f;
+    --alarm-ink: #2a0b07;
+    --alarm-soft: #3a1611;
+    --focus: #f2b630;
+    color-scheme: dark;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-alarm: var(--alarm);
+  --color-alarm-ink: var(--alarm-ink);
+  --color-alarm-soft: var(--alarm-soft);
+  --color-focus: var(--focus);
+  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+  --font-urdu: var(--font-nastaliq), "Noto Nastaliq Urdu", serif;
+}
+
+@layer base {
+  html {
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Urdu (Nastaliq) needs a tall line box; Roman Urdu stays in the Latin face. */
+  :lang(ur) {
+    font-family: var(--font-urdu);
+    line-height: 2.25;
+  }
+  :lang(ur-Latn) {
+    font-family: var(--font-sans);
+    line-height: 1.55;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

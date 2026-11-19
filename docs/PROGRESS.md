@@ -3,8 +3,8 @@
 **Deadline: HARD STOP 16:00 IST, Thu 19 Nov 2026** — everything built, reviewed, README written, pushed,
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
-**Current milestone:** M6 complete · next M7
-**Last updated:** 2026-11-19 09:42 IST
+**Current milestone:** M7 complete · next M8
+**Last updated:** 2026-11-19 09:48 IST
 
 ## Status
 | # | Subject | Status | Time |
@@ -15,7 +15,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
 | M4 | feat: add coach api with zod contract and basic ui | done | 09:05 |
 | M5 | feat: add multilingual safety pre-screen | done | 09:31 |
 | M6 | feat: add model triage and fail-closed fallbacks | done | 09:42 |
-| M7 | feat: render structured replies with rtl support | todo | |
+| M7 | feat: render structured replies with rtl support | done | 09:48 |
 | M8 | test: add playwright e2e with mock anthropic api | todo | |
 | M9 | docs: add readme | todo | |
 | M10 | test: add golden eval set against real model | todo | |
@@ -43,8 +43,7 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
   milestone) instead of inside M3; M3 still adds CI and its done-when (pushed + Actions green) is unchanged.
 
 ## Next step
-M7: ReplyCard / Composer / region toggle / footer / Nastaliq; SPEC §8 manual pass; screenshots EN + UR,
-mobile + desktop, light + dark; next-devtools clean.
+M8: mock Anthropic + Playwright (everyday, crisis with 0 model calls, PK toggle); CI runs e2e; reviewer.
 
 - M4: `contacts.ts` (all verified contacts) and the fallback part of `templates.ts` land in M4, because the
   fallback must show the region's emergency number and numbers may only come from `contacts.ts`.
@@ -89,6 +88,26 @@ mobile + desktop, light + dark; next-devtools clean.
   "half the dose" missed; ORS dropped from the medicine list). All fixed with table rows. 3rd pass:
   **Verdict: ship**; its two minors (m6 everyday false positives — "a drop in grades", "painting",
   pulao, feeding interval next to "doctor"; m7 "twice a day") were fixed with rows before commit.
+
+- M7 design: cool "night-feed" palette (peacock teal coach, red reserved for crisis, marigold focus
+  ring), Atkinson Hyperlegible Next (legibility for tired parents) + Noto Nastaliq Urdu on `:lang(ur)`
+  (Roman Urdu = `ur-Latn`, stays Latin). Base CSS lives in `@layer base` so utilities win; Nastaliq gets
+  language-aware line heights (2.2) because Tailwind's `leading-*` would clip it.
+- M7 UI checks (Playwright MCP, EN + UR RTL, 375 px + 1280 px, light + dark) found and fixed: Urdu parent
+  bubble flipping to the left (`dir=auto` + logical margin), step badges offset by Nastaliq line height,
+  bidi reordering of "800-SAKINA" inside the Urdu label (label reworded, number shown separately),
+  contact rows crushed at 375 px (stacked on mobile), escalation banner scrolled out of view on mobile
+  (new replies scroll to their top), textarea scrollbar, and template text saying helplines are "below"
+  when the UI renders them above (templates now say "above"; test row asserts no "below/نیچے/neeche").
+- M7 SPEC §8 manual pass on `pnpm dev` with the real key: F1 → coach/routine, 4 steps, check-in; Urdu
+  crisis → red banner, Urdu template RTL Nastaliq, 999 + 800-725462 tel links with sources, safety
+  question, log `kind=escalation source=prescreen`; PK + Roman crisis → 1122 / 15 / Taskeen, log
+  `source=prescreen`; paracetamol → `coach/refer`, no dose, points to doctor/pharmacist. next-devtools
+  `get_errors` and `get_compilation_issues` clean.
+- M7: with the earlier suicide disclosure still in history, the paracetamol question escalated
+  (source `model`) — history is triaged by the model by design (SPEC §6.2); Clear resets it.
+- M7: composer does not truncate pasted text (a crisis at the end of a long paste must not be cut); it
+  shows the count and blocks sending above 1000 characters instead.
 
 ## Open questions / risks
 - Local Node is 25.8.1; Vitest 5.1.1 engines are `^22.12 || ^24 || >=26` (CI uses Node 26). Policy above:
