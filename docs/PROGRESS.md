@@ -44,7 +44,10 @@ CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time"
 
 ## Next step
 Build is complete and pushed. Remaining (human): record the SPEC §8 video with `pnpm build && pnpm start`
-and a real key, then add its link to the README placeholder. Nothing was cut.
+and a real key (press Clear before the paracetamol step), then add its link to the README placeholder.
+Nothing was cut. Final pass: `fix: address final review safety and requirement gaps`, then
+`docs: finalize readme` (pitch, ≤ 5-command quickstart, architecture, safety design, testing strategy,
+tradeoffs, with more time).
 Buffer-period fix after M11 (outside the 11 planned commits, logged here): `fix: let a slow model reply
 use the full deadline`.
 

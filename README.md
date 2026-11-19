@@ -1,96 +1,177 @@
 # Parent Coach
 
-A parent describes a concern in **English, Urdu (Nastaliq) or Roman Urdu**. The coach replies with a short,
-structured plan (a summary, up to four steps, a follow-up) — and when a message describes a medical
-emergency, child abuse, self-harm or domestic violence, it stops coaching and shows **pre-written
-escalation guidance with verified local helplines** for the UAE or Pakistan.
+A parent describes a worry in **English, Urdu (Nastaliq) or Roman Urdu** and gets a short, practical plan:
+a one-line summary, up to four steps, and a follow-up question or check-in. When the message describes a
+**medical emergency, child abuse, self-harm or domestic violence**, the app stops coaching. It shows
+pre-written escalation guidance with **verified helplines** for the UAE or Pakistan, and the model is
+never asked to write it.
 
-> Not a medical, legal or crisis service. It never diagnoses, names medicines or doses, or gives legal steps.
+> Not a medical, legal or crisis service. It never diagnoses, names medicines or doses, or gives legal
+> steps. It refers the parent to people who can.
 
 <!-- Demo video: _link to be added_ -->
 
 ## Quickstart
 
-Requirements: Node 26 (CI) — Node 25 also works — and pnpm 12 (`packageManager` pins 12.21.0).
+Requires Node 26 (CI; Node 25 also works) and pnpm 12.
 
 ```sh
+git clone https://github.com/omChauhanDev/parent-coach.git && cd parent-coach
 pnpm install
-cp .env.example .env.local        # then set ANTHROPIC_API_KEY
-pnpm dev                          # http://localhost:3000
+cp .env.example .env.local     # set ANTHROPIC_API_KEY
+pnpm dev                       # http://localhost:3000
 ```
 
-Without a key the app still runs: crisis messages are escalated by the pre-screen, everything else gets a
-safe fallback with the region's emergency numbers.
+Without a key the app still runs. The pre-screen still escalates crisis messages, and every other
+message gets a safe fallback that shows the region's emergency numbers.
 
-| Variable            | Purpose                                                               |
-| ------------------- | --------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY` | Server-side only (`src/lib/coach/anthropic-client.ts`, `server-only`) |
-| `COACH_MODEL`       | Defaults to `claude-opus-5-5` (effort `low`, structured output)       |
+| Command      | What it does                                                                                   |
+| ------------ | ---------------------------------------------------------------------------------------------- |
+| `pnpm check` | `tsc` + ESLint + Prettier + Vitest (unit + route integration). Runs in CI.                     |
+| `pnpm e2e`   | Playwright (chromium) against a production build, with Anthropic mocked over HTTP. Runs in CI. |
+| `pnpm eval`  | Golden set through the real pipeline and **real model**. Costs money, so it never runs in CI.  |
 
-## Scripts
+`COACH_MODEL` overrides the default model, `claude-opus-5-5` (effort `low`, structured output). The API
+key is read only in `src/lib/coach/anthropic-client.ts`, which is marked `server-only`.
 
-| Command                                  | What it does                                                                                          |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `pnpm dev` / `pnpm build` / `pnpm start` | Next.js 16 app                                                                                        |
-| `pnpm check`                             | `tsc` + ESLint + Prettier + Vitest (unit + route integration) — runs in CI                            |
-| `pnpm e2e`                               | Playwright (chromium) against `next build && next start` with Anthropic mocked over HTTP — runs in CI |
-| `pnpm eval`                              | Golden set against the **real model** — costs money, never in CI                                      |
+## Architecture
 
-## How it stays safe
+One page, one API route, one model call. Each layer either passes the request on or answers with fixed
+text.
 
-Layered and fail-closed ([ADR 0001](docs/decisions/0001-layered-fail-closed-safety.md)):
+```mermaid
+flowchart LR
+  UI["page.tsx<br/>renders CoachReply fields only"] -->|"POST /api/coach<br/>message · last 8 turns · region"| V{"L0 validate<br/>(Zod, 16 KB)"}
+  V -- invalid --> E400["400 ErrorBody"]
+  V --> P{"L1 pre-screen<br/>current message"}
+  P -- hit --> ESC["Escalation template<br/>+ verified contacts"]
+  P -- miss --> M["L2 model call<br/>risk first in schema"]
+  M -- "crisis / category" --> ESC
+  M -- "error · refusal · max_tokens<br/>L3 invalid JSON/schema" --> FB["Fallback template<br/>+ emergency number"]
+  M -- ok --> Q{"L4 post-check"}
+  Q -- "digits · URL · dose · medicine" --> REF["Refer template"]
+  Q -- clean --> CO["Coach reply<br/>(validated model fields)"]
+```
 
-| Layer | What happens                                                                                                                                                                                                                                                                  |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| L0    | Request validated with Zod (≤ 1000-char message, ≤ 8 history turns, ≤ 16 KB body) → 400 otherwise                                                                                                                                                                             |
-| L1    | **Deterministic pre-screen** of the current message — normalised (NFKC, Urdu letter folding, diacritics/ZWNJ stripped, Eastern digits) and matched against phrase-level patterns in all three languages. A hit returns the escalation template **without calling the model**. |
-| L2    | **Model triage** — `risk` and `crisisCategory` are the first fields of the structured output ([ADR 0002](docs/decisions/0002-single-call-structured-triage.md)). A crisis flag discards the model's text and serves the same pre-written escalation.                          |
-| L3    | Output validation — `stop_reason` (refusal, max_tokens), JSON parse, Zod schema → fallback on any failure                                                                                                                                                                     |
-| L4    | **Post-check** — any 3+ digit run, URL, dosage unit or medicine name in model text → refer template                                                                                                                                                                           |
-| L5    | The UI renders `CoachReply` fields only; the region's emergency numbers are always in the footer                                                                                                                                                                              |
+| Module                       | Role                                                                                                                                                                 |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/contract.ts`        | Zod schemas for request, model output and reply. This is the only contract between the layers.                                                                       |
+| `src/lib/safety/`            | `normalize` → `prescreen` (patterns per category and script), `postcheck`, `templates`, `contacts`                                                                   |
+| `src/lib/coach/`             | `pipeline.ts` runs L1–L4 with an injected model and logger. `model.ts` maps every SDK error and stop reason to a failure reason. `prompt.ts`, `anthropic-client.ts`. |
+| `src/app/api/coach/route.ts` | HTTP only: size limit, parse, validate, respond. It always returns 200 with a `CoachReply` (400 only for invalid input).                                             |
+| `src/components/`            | Chat, reply card (RTL, tap-to-call links with sources), composer, region toggle, emergency footer                                                                    |
 
-Every error path (timeout, 429, 5xx/529, 401, network, refusal, malformed output, missing key, our own
-19 s deadline) returns HTTP 200 with a fallback that includes the emergency number. Server logs carry one
-line per request — `{kind, risk, category, source, language, failure, ms}` — and never message text.
+Details: [Architecture](docs/ARCHITECTURE.md) · [Spec and acceptance criteria](docs/SPEC.md) ·
+ADRs [0001 layered safety](docs/decisions/0001-layered-fail-closed-safety.md) ·
+[0002 single-call triage](docs/decisions/0002-single-call-structured-triage.md) ·
+[0003 e2e mock](docs/decisions/0003-e2e-mock-at-http-boundary.md)
+
+## Safety design
+
+**Fail closed, and keep the model's text away from anything safety-critical.**
+
+| Layer | What happens                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L0    | The request is validated with Zod: message ≤ 1000 characters, ≤ 8 history turns, body ≤ 16 KB. The client trims the oldest turns so that a long Urdu conversation never blocks the pre-screen.                                                                                                                                                                                                                                                                                                                      |
+| L1    | **Deterministic pre-screen** of the current message. The text is normalised first (NFKC, Urdu letter folding, diacritics and invisible characters stripped, Eastern digits mapped, accents removed, repeated letters squeezed, English contractions tried glued, expanded and dropped). It is then matched against **phrase-level** patterns in all three languages: person + act, age + symptom, partner + verb, rather than single keywords. A hit returns the escalation template **without calling the model**. |
+| L2    | **Model triage.** `risk` and `crisisCategory` are the first fields of the structured output, so the model classifies before it writes advice. A crisis flag discards all model text and serves the same pre-written escalation.                                                                                                                                                                                                                                                                                     |
+| L3    | **Output validation.** Refusal and `max_tokens` stop reasons, the JSON parse and the Zod schema are all checked. Any failure → fallback.                                                                                                                                                                                                                                                                                                                                                                            |
+| L4    | **Post-check** of model text. A 3+ digit run, any number next to "call"/"dial", a URL or domain, a dosage unit, a medicine name (incl. UAE/Pakistan brands) or a dosing interval → the fixed refer template.                                                                                                                                                                                                                                                                                                        |
+| L5    | The UI renders `CoachReply` fields only. The region's emergency numbers are always visible in the footer.                                                                                                                                                                                                                                                                                                                                                                                                           |
+
+- **Escalations are pre-written** per category × language (`templates.ts`). They lead with "if anyone is in
+  danger, call {emergency} now", then give the category's steps and at most three contacts. Each one
+  ends by asking whether everyone is safe and inviting the parent to continue, so a false positive is
+  recoverable.
+- **The pre-screen prefers false positives.** Negated and "hypothetical" crisis statements still escalate.
+  Everyday hyperbole stays quiet: "she's killing it at school", "main to mar gayi", "dimagh kharab kar
+  diya". Both directions have table tests.
+- **Prompt injection.** Parent text and history go to the model as JSON data inside the user turn,
+  never into the system prompt. L1, L3, L4 and L5 don't depend on the model, so at worst an injection
+  can downgrade L2.
+- **Every error path is fail-closed.** Timeout, 429, 5xx/529, 401, network errors, refusal, malformed
+  output, a missing key and our own 19 s deadline all return HTTP 200 with a fallback that includes the
+  emergency number.
+- **Privacy.** Nothing is persisted, and history lives in React state only. The server logs one line per
+  request, `{kind, risk, category, source, language, failure, ms}`, and the log type has no field that
+  could hold message text.
 
 ### Helplines
 
-All numbers live in [`src/lib/safety/contacts.ts`](src/lib/safety/contacts.ts), each with its official
-`https` source page and `verifiedOn: 2026-11-19`, re-checked by hand against the raw page text
-([research notes](docs/research/safety.md#5-verified-contacts-used-by-the-app)). The model never writes
-numbers.
+Every number lives in [`src/lib/safety/contacts.ts`](src/lib/safety/contacts.ts) with its official
+`https` source page and `verifiedOn: 2026-11-19`. Each was re-checked against the raw text of that page
+([research notes](docs/research/safety.md#5-verified-contacts-used-by-the-app)). The model is told never to
+write numbers, and the post-check replaces any reply with a 3+ digit run or a number next to "call" /
+"dial".
 
 | Region   | Always shown                       | Category lines                                                                                                                                  |
 | -------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | UAE      | 999 police · 998 ambulance         | 116111 child protection · 800-725462 (Abu Dhabi, 24/7) and 800506 (Dubai) mental health · 800111 (Dubai) and 800-444 (Abu Dhabi) family support |
 | Pakistan | 15 police · 1122 rescue · 115 Edhi | 1121 child protection (KP) · 1043 women's helpline (Punjab) · Taskeen psychologist line (NGO)                                                   |
 
-## Testing
+## Testing strategy
 
-- **Unit (table-driven)** — normalisation, pre-screen positives per category × language, euphemisms,
-  buried and hypothetical disclosures, false-positive traps ("killing it", "main to mar gayi"…), language
-  detection, contract parsing, post-check, contacts vs the SPEC table, every template.
-- **Route integration** — a fake Anthropic client throwing the SDK's real error classes; asserts the
-  status, reply kind, the logged failure reason and that no message text is logged.
-- **E2E (3 tests)** — everyday flow (incl. Clear resetting the history the model sees) and Urdu /
-  Roman Urdu crises with the region toggle; the crisis spec asserts the mock received **zero** model
-  requests ([ADR 0003](docs/decisions/0003-e2e-mock-at-http-boundary.md)).
-- **Eval** — 46 golden cases (`evals/golden.json`, incl. 25 from an adversarial red-team pass) through
-  the real pipeline and model; prints which layer caught each crisis and exits 1 on any missed crisis or
-  any dose / number / URL leaking into a coach reply. Last run (2026-11-19): 46/46 pass, crisis recall
-  21/21 — 18 caught by the pre-screen, 3 only by the model (buried warning signs, coercive control).
+Each layer is tested where it is cheapest and most deterministic. The real model is used only where
+nothing else can stand in for it. There are no snapshot tests.
+
+| Level              | What it proves                                                                                                                                                                                                                                                                                                                                                          | Where                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Unit, table-driven | Pre-screen positives per category × language, euphemisms, buried and hypothetical disclosures, normalisation tricks; false-positive traps; language detection; contract parsing; post-check (doses, units, domains vs everyday text); every template; contacts match the SPEC table and have `https` sources                                                            | `src/**/*.test.ts`                     |
+| Route integration  | A fake Anthropic client throws the SDK's real error classes. Every failure mode returns 200 + fallback with the right logged reason. A pre-screen crisis makes 0 model calls. A model-flagged crisis discards model text. No message text is ever logged.                                                                                                               | `src/app/api/coach/route.test.ts`      |
+| E2E (Playwright)   | Everyday flow, including Clear resetting the history the model receives and empty web storage. Urdu and Roman Urdu crises with the region toggle. The crisis spec asserts the mocked API received **zero** requests.                                                                                                                                                    | `e2e/`                                 |
+| Eval (real model)  | 53 golden cases: 25 from an adversarial red-team pass, plus 7 follow-ups after an escalation. It reports which layer caught each crisis. It checks that the reply's script matches the language. It exits 1 on any missed crisis, or on a dose, number, URL, medicine name, diagnosis or legal step in model-written text. That check is independent of the post-check. | `evals/golden.json`, `scripts/eval.ts` |
+
+Last eval run (2026-11-19, 53 cases): crisis recall **24/24**: 18 caught by the pre-screen and 6 only by
+the model (buried warning signs, coercive control, continuing danger after an earlier escalation). No
+leaks. There were two misses. An Urdu everyday reply hit the 19 s deadline and got the safe fallback; it
+passed on re-run. One expectation was corrected: a dose question straight after a self-harm disclosure
+now correctly stays escalated.
+
+CI runs `pnpm check`, `pnpm build` and `pnpm e2e` on every push.
+
+## Tradeoffs
+
+- **Pre-written escalations over model-written ones.** They are less personal, but the wording and
+  numbers are reviewed once and can't drift or be invented.
+- **Phrase-level pre-screen over keywords or a classifier.** It is explainable, instant and testable,
+  and it works without a key. The cost is that it only catches explicit phrasing. Euphemisms and
+  indirect warning signs depend on model triage, and `pnpm eval` measures that.
+- **Only the current message is pre-screened; the model triages it with history as context.** An
+  earlier crisis has already been answered with contacts, so it doesn't lock the conversation. If the
+  parent says everyone is safe or asks something new, the coach answers it. If danger continues or
+  safety is unclear, it escalates again. This keeps the escalation's "tell me more" promise and makes
+  a false positive recoverable. The cost is that recovery depends on the model, and eval cases cover
+  both directions.
+- **One model call with triage inside the schema ([ADR 0002](docs/decisions/0002-single-call-structured-triage.md))**
+  rather than a separate classifier: one request, one deadline and one mock, for a recall gain the
+  eval hasn't shown to be needed.
+- **A blunt post-check.** Any 3+ digit run or dosage unit in model text swaps in the refer template, so
+  some harmless replies are replaced. Context rules keep everyday "spoon" and feeding intervals working.
+- **No streaming.** The whole reply is validated before anything is shown. Replies usually take 2–10 s
+  and Urdu replies are the slowest. One hit the 19 s deadline in the last eval run and got the safe
+  fallback. Nothing unvalidated ever reaches the screen.
+- **Opus 5.5 at low effort**, the most capable model, at a higher cost per reply than a smaller one. A
+  19 s deadline (SDK 18 s per attempt, 1 retry) keeps every reply under 20 s.
+- **Local only:** no auth, persistence, rate limiting or deployment.
+
+## With more time
+
+- Native-speaker review of the Urdu and Roman Urdu templates, and a safeguarding professional's review
+  of all escalation text.
+- Close the Pakistan gap: there is no verified 24/7 national mental-health or child-protection line.
+  Add a scheduled job that re-fetches each contact's source page and fails when the number disappears.
+- Measure the pre-screen's false-positive rate on real, consented everyday messages, and grow the eval
+  set past 53 cases with more code-mixed and indirect disclosures. Run it nightly on a budget.
+- Rate limiting, security headers, a streamed body-size limit (today the 16 KB check reads the body
+  first) and a deployment. Stream coach text after the triage fields have been
+  validated.
+- Arabic for UAE users, and opt-in follow-up reminders (these need persistence and consent).
 
 ## Limitations
 
-- Urdu and Roman Urdu template wording is a draft and needs native-speaker review.
-- Pakistan has no verified 24/7 national mental-health or child-protection line; PK escalations lead with
-  15 / 1122 / 115. Contacts must be re-verified before any real use.
-- The pre-screen catches explicit phrases; euphemisms and indirect signs rely on the model layer
-  (measured by `pnpm eval`).
-  It prefers false positives — every escalation invites the parent to continue if no one is in danger.
-- Local only: no auth, persistence, rate limiting or deployment. History lives in React state (last 8
-  turns sent); "Clear conversation" empties it.
+- Urdu and Roman Urdu template wording is a draft.
+- Contacts must be re-verified before any real use.
+- The pre-screen is a safety net, not a guarantee. It catches explicit phrases, and indirect signs rely
+  on the model.
 
-## Docs
-
-[Spec](docs/SPEC.md) · [Architecture](docs/ARCHITECTURE.md) · [Plan](docs/PLAN.md) · [Progress](docs/PROGRESS.md) · [ADRs](docs/decisions/)
+[Plan](docs/PLAN.md) · [Progress log](docs/PROGRESS.md)
