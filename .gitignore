@@ -5,3 +5,9 @@ notes/
 .claude/settings.local.json
 node_modules/
 .next/
+playwright-report/
+test-results/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store

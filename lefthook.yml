@@ -1,0 +1,7 @@
+commit-msg:
+  piped: true
+  jobs:
+    - name: sanitize
+      run: sh scripts/sanitize-commit-msg.sh {1}
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
