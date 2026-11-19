@@ -43,6 +43,43 @@ describe("buildEscalation (SPEC §6.3)", () => {
   });
 });
 
+// A medicine question during an open medical emergency gets the same answer from either card.
+const NO_MEDICINE: Record<Language, string> = {
+  en: "don't give any medicine until a doctor or the call handler tells you to",
+  ur: "جب تک ڈاکٹر یا کال سننے والا نہ کہے، بچے کو کوئی دوا نہ دیں",
+  roman_ur: "jab tak doctor ya call sunne wala na kahe, bachay ko koi dawa na dein",
+};
+const KEPT: Record<Language, readonly string[]> = {
+  en: [
+    "Stay with your child",
+    "keep the packet or bottle",
+    "Don't wait to see whether it gets better",
+  ],
+  ur: ["بچے کے ساتھ رہیں", "پیکٹ یا بوتل", "یہ دیکھنے کا انتظار نہ کریں"],
+  roman_ur: ["Bachay ke saath rahein", "packet ya bottle", "Yeh dekhne ka intezar na karein"],
+};
+
+describe("medical escalation says not to give medicine (SPEC §6.3)", () => {
+  it.each(LANGUAGES.flatMap((l) => REGIONS.map((r) => [l, r] as const)))(
+    "full medical card %s · %s keeps every earlier step and adds the medicine line",
+    (language, region) => {
+      const steps = buildEscalation("medical_emergency", language, region, "prescreen").steps;
+      expect(steps).toHaveLength(4);
+      expect(steps.join(" ").toLowerCase()).toContain(NO_MEDICINE[language].toLowerCase());
+      for (const kept of KEPT[language]) expect(steps.join(" ")).toContain(kept);
+    },
+  );
+  it.each(CATEGORIES.filter((c) => c !== "medical_emergency"))(
+    "other full cards are unchanged by it (%s)",
+    (category) => {
+      for (const language of LANGUAGES) {
+        const text = buildEscalation(category, language, "AE", "prescreen").steps.join(" ");
+        expect(text.toLowerCase()).not.toContain(NO_MEDICINE[language].toLowerCase());
+      }
+    },
+  );
+});
+
 describe("buildSafetyCheck (SPEC §6.3)", () => {
   it.each(escalationRows)("%s · %s · %s", (category, language, region) => {
     const reply = buildSafetyCheck(category, language, region);

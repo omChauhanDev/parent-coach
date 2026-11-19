@@ -4,7 +4,7 @@
 CI green. **Target 15:30 IST.** This supersedes the email's "4:00 PM Dubai time" (= 17:30 IST).
 
 **Current milestone:** all milestones (M1–M11) complete + final review fixes · remaining: record the 2-minute video (SPEC §8)
-**Last updated:** 2026-11-19 13:20 IST
+**Last updated:** 2026-11-19 13:35 IST
 
 ## Status
 | # | Subject | Status | Time |
@@ -198,6 +198,16 @@ use the full deadline`.
   run: unclear danger → `general`, high dose → full medical card, sleep → safety check, "everyone is
   safe" → coach); full 57-case run stopped at 47/47 ✓ to save API credit (user: ~$1.67 left) — the 10
   unrun cases are the ones just verified. Crisis recall 27/27 (18 pre-screen, 9 model), leaks 0.
+
+- **User test run 2 (13:25):** scary smile → coach ✓; "child in danger, just fell on ground" → full medical
+  card ✓; "okay, how should i make him sleep…" → safety-check card with the medicine line ✓; but "how much
+  ml paracetamol… 3 years" repeated the full medical card, which never mentioned medicine. Template-only
+  fix (no prompt change, no eval spend): the full medical card's last step keeps "don't wait to see if it
+  gets better" and adds "don't give any medicine until a doctor or the call handler tells you to" (EN /
+  UR / Roman, same wording as the safety-check line). "Food or drink" deliberately left out: withholding
+  feeds is wrong for a feverish newborn (also `medical_emergency`). Rows: medical card keeps all earlier
+  steps + adds the line (3 languages × 2 regions); other categories unchanged; verified the rows fail on
+  the old template.
 
 ## Open questions / risks
 - Local Node is 25.8.1; Vitest 5.1.1 engines are `^22.12 || ^24 || >=26` (CI uses Node 26). Policy above:

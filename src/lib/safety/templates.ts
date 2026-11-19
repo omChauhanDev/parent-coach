@@ -105,7 +105,7 @@ const ESCALATION: Record<Language, EscalationText> = {
       medical_emergency: [
         "Stay with your child and follow what the call handler tells you.",
         "If they swallowed something, keep the packet or bottle to show the medics.",
-        "Don't wait to see whether it gets better on its own.",
+        "Don't wait to see whether it gets better on its own, and don't give any medicine until a doctor or the call handler tells you to.",
       ],
       self_harm: [
         "Don't leave them alone — stay with them, or ask someone you trust to.",
@@ -141,7 +141,7 @@ const ESCALATION: Record<Language, EscalationText> = {
       medical_emergency: [
         "بچے کے ساتھ رہیں اور کال سننے والے اہلکار کی ہدایات پر عمل کریں۔",
         "اگر بچے نے کچھ نگل لیا ہے تو اس کا پیکٹ یا بوتل طبی عملے کو دکھانے کے لیے پاس رکھیں۔",
-        "یہ دیکھنے کا انتظار نہ کریں کہ حالت خود بہتر ہوتی ہے یا نہیں۔",
+        "یہ دیکھنے کا انتظار نہ کریں کہ حالت خود بہتر ہوتی ہے یا نہیں، اور جب تک ڈاکٹر یا کال سننے والا نہ کہے، بچے کو کوئی دوا نہ دیں۔",
       ],
       self_harm: [
         "انہیں اکیلا نہ چھوڑیں — ان کے ساتھ رہیں، یا کسی بھروسے والے شخص کو ساتھ رہنے کو کہیں۔",
@@ -178,7 +178,7 @@ const ESCALATION: Record<Language, EscalationText> = {
       medical_emergency: [
         "Bachay ke saath rahein aur call sunne wale ahlkar ki hidayat par amal karein.",
         "Agar bachay ne kuch nigal liya hai to us ka packet ya bottle medical team ko dikhane ke liye paas rakhein.",
-        "Yeh dekhne ka intezar na karein ke haalat khud behtar hoti hai ya nahi.",
+        "Yeh dekhne ka intezar na karein ke haalat khud behtar hoti hai ya nahi, aur jab tak doctor ya call sunne wala na kahe, bachay ko koi dawa na dein.",
       ],
       self_harm: [
         "Unhein akela na chhorein — un ke saath rahein, ya kisi bharose wale shakhs ko saath rehne ko kahein.",
